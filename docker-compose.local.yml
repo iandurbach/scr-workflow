@@ -1,0 +1,8 @@
+services:
+  rstudio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        QUARTO_VERSION: ${QUARTO_VERSION:-1.6.43}
+    image: secr-workflow-rstudio:${IMAGE_TAG:-local}

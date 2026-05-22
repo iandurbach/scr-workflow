@@ -1,0 +1,5 @@
+quarto render namkha_advanced/vignette/01_make_capthist.qmd --to all
+quarto render namkha_advanced/vignette/02_make_masks.qmd --to all
+quarto render namkha_advanced/vignette/03_make_ms_masks.qmd --to all
+quarto render namkha_advanced/vignette/04_model_fitting.qmd --to all
+quarto render namkha_advanced/vignette/05_model_results.qmd --to all

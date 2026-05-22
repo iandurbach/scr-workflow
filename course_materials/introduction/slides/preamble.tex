@@ -1,0 +1,45 @@
+% Local Beamer header for the Namkha workshop slides.
+\usepackage{color}
+\usepackage{verbatim}
+\usepackage{tikz}
+\usepackage{tabto}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{etoolbox}
+\usepackage{tcolorbox}
+\usepackage{arydshln}
+\usepackage{pifont}
+\usepackage{wasysym}
+\usetikzlibrary{matrix,backgrounds,positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+\setbeamercolor{background canvas}{bg=white}
+\setbeamertemplate{itemize item}{\small$\bullet$}
+\setbeamertemplate{itemize subitem}{\tiny$\Box$}
+\setbeamertemplate{itemize subsubitem}{\tiny$\blacktriangleright$}
+\setbeamercolor{itemize item}{fg=mDarkTeal}
+\setbeamercolor{itemize subitem}{fg=mLightBrown}
+\setbeamercolor{itemize subsubitem}{fg=mDarkTeal}
+
+\definecolor{grn}{rgb}{0.55, 0.71, 0.0}
+\definecolor{rd}{rgb}{0.82, 0.1, 0.26}
+\definecolor{bl}{rgb}{0.16, 0.32, 0.75}
+\definecolor{or}{rgb}{1, 0.70, 0.28}
+\definecolor{agreen}{rgb}{0.14, 0.18, 0.0}
+\definecolor{bred}{rgb}{0.20, 0, 0}
+
+\newcommand{\hib}[1]{\colorbox{bl!20}{$\displaystyle#1$}}
+\newcommand{\hir}[1]{\colorbox{rd!20}{$\displaystyle#1$}}
+\newcommand{\hig}[1]{\colorbox{grn!20}{$\displaystyle#1$}}
+\newcommand{\hio}[1]{\colorbox{or!20}{$\displaystyle#1$}}
+
+\graphicspath{{../../../template/}{../output/fig/}{../output/results/}}
+\titlegraphic{\vspace{5.5cm}\flushright\includegraphics[width=1.7cm]{uosalogo1.png}}
+
+\makeatletter
+\preto{\@verbatim}{\topsep=-5pt \partopsep=-5pt }
+\makeatother

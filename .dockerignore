@@ -1,0 +1,4 @@
+*
+!Dockerfile
+!docker/install-packages.R
+!docker/provision-workshop-users.sh

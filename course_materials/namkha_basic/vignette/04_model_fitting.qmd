@@ -1,0 +1,223 @@
+---
+title: "Fit simple SECR models"
+author: "Ian Durbach & Cornelia Oedekoven"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-fold: false
+  pdf: default
+format-links:
+  - pdf
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE,
+  fig.align = "center",
+  dpi = 150
+)
+
+input_file <- knitr::current_input()
+if (!is.null(input_file)) {
+  repo_root <- normalizePath(file.path(dirname(input_file), "../..") )
+  knitr::opts_knit$set(root.dir = repo_root)
+}
+```
+
+# Covered in this tutorial
+
+- Load the capture history and mask objects
+- Check the covariates available for modelling
+- Fit a null SECR model
+- Fit simple models with density and detector covariates
+- Compare candidate models using AIC
+- Save fitted models for the results tutorial
+
+# Introduction
+
+In this tutorial we fit a small set of spatial capture-recapture models using `secr.fit()`. The aim is to show the mechanics of fitting models with the objects created in the previous tutorials: the capture history `ch`, the trap covariates attached to `traps`, and the spatial covariates attached to `mask_model`.
+
+An SECR model has a density component and a detection component. The density component describes how expected animal density varies across the mask. The detection component describes how the encounter rate changes with distance from each detector and, optionally, with detector-level covariates.
+
+The models here are intentionally written out explicitly. This makes it clear which parameter is being modelled in each candidate model and avoids hiding the main SECR ideas inside loops or helper functions.
+
+# Preparations
+
+We only need the `secr` package for this script because the data preparation has already been done.
+
+```{r packages}
+# Packages needed 
+library(secr)
+
+output_file <- "namkha_basic/output/namkha_basic_fitted_models.RData"
+```
+
+# Load capture histories and masks
+
+The capture-history file contains the `ch` object and the trap covariates. The mask file contains the full mask, the survey-area mask, and `mask_model`, which is the mask used for model fitting.
+
+```{r load-inputs}
+# Load the capthist object from script 01 and the masks from script 02
+load("namkha_basic/output/namkha_basic_secr_inputs_capthist.RData")
+load("namkha_basic/output/namkha_basic_secr_inputs_mask.RData")
+```
+
+Before fitting models, it is worth checking that the objects contain the expected covariates. Trap covariates can be used in the detection part of the model. Mask covariates can be used in the density part of the model.
+
+```{r check-inputs}
+# Check that the key objects contain the expected covariates
+summary(ch)
+names(covariates(traps))
+names(covariates(mask_model))
+```
+
+In the models below:
+
+- `D` is density, modelled using mask covariates such as `std_tri` and `std_d2hydro`
+- `lambda0` is the baseline encounter-rate parameter, modelled using trap covariates such as `valley_stream` and `cliff`
+- `sigma` controls the spatial scale of detection
+
+# Encounter and detection functions
+
+The models use the hazard half-normal detection function, specified with `detectfn = "HHN"`. For count detectors, it is helpful to think in terms of an encounter-rate function: the expected number of encounters declines as the distance between an animal's activity centre and a camera increases.
+
+`lambda0` is the encounter-rate parameter at distance zero, and `sigma` controls how quickly encounter rate declines with distance. Both parameters must be positive, so `secr` fits them on a link-function scale. We usually interpret fitted values and predictions on the natural scale rather than directly interpreting the raw coefficients.
+
+# Fit candidate models
+
+The fitting mask is `mask_model`, not the Namkha boundary mask. This allows animals with activity centres outside Namkha to contribute to the likelihood if they are still within range of traps near the boundary. Abundance and density can later be summarised over the survey-area mask.
+
+## Null model
+
+The null model has no density covariates and no detector covariates. It is the baseline model against which the other candidate models are compared.
+
+```{r fit-null-model}
+# The fitting mask is the trap-buffer mask, not the Namkha boundary mask.
+# This allows activity centres outside Namkha if they are within range of traps.
+
+# Null model: no density or detector covariates
+m0 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  verify = FALSE,
+  trace = FALSE
+)
+```
+
+## Density covariate models
+
+The next two models allow density to vary with spatial covariates on the mask. `std_tri` is standardised Terrain Ruggedness Index, and `std_d2hydro` is standardised distance to water. Standardised covariates are used because the model coefficients are easier to compare and optimisation is often more stable.
+
+```{r fit-density-models}
+# Density varies with ruggedness (TRI)
+m1 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ 1, sigma ~ 1),
+  verify = FALSE,
+  start = m0,
+  trace = FALSE
+)
+
+# Density varies with distance to water
+m2 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_d2hydro, lambda0 ~ 1, sigma ~ 1),
+  verify = FALSE,
+  start = m0,
+  trace = FALSE
+)
+```
+
+The `start = m0` argument gives the optimiser starting values from the null model. This is a practical way to make fitting related models more stable.
+
+## Detector covariate model
+
+The next model keeps density constant but allows encounter rate to vary depending on whether the camera was placed in a valley or stream location.
+
+```{r fit-detector-model}
+# Encounter rate varies depending on whether detection is in a valley or stream
+m3 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ valley_stream, sigma ~ 1),
+  verify = FALSE,
+  start = m0,
+  trace = FALSE
+)
+```
+
+Detector covariates describe camera locations, not animal activity-centre locations. They are therefore used with `lambda0`, not with `D`.
+
+## Combined models
+
+The final two models combine density covariates and detector covariates. These models allow spatial variation in density and variation in encounter rate between types of camera sites.
+
+```{r fit-combined-models}
+# Combined model with a density covariate and a detector covariate
+m4 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ valley_stream, sigma ~ 1),
+  verify = FALSE,
+  start = m1,
+  trace = FALSE
+)
+
+# Combined model with a density covariate and a detector covariate
+m5 <- secr.fit(
+  ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri + std_d2hydro, lambda0 ~ cliff + valley_stream, sigma ~ 1),
+  verify = FALSE,
+  start = m4,
+  trace = FALSE
+)
+```
+
+# Compare fitted models
+
+AIC compares the candidate models by balancing model fit and model complexity. Lower AIC indicates better support among the models being compared. AIC does not say that a model is true; it ranks the candidate set that we chose to fit.
+
+```{r compare-models}
+# Compare fitted models using AIC
+AIC(m0, m1, m2, m3, m4, m5)
+```
+
+For a quick check, we can also inspect the parameter estimates for the model with the lowest AIC.
+
+```{r inspect-best-model}
+aic_table <- AIC(m0, m1, m2, m3, m4, m5)
+best_model_name <- rownames(aic_table)[which.min(aic_table$AIC)]
+best_model_name
+
+summary(get(best_model_name))
+```
+
+# Save fitted models
+
+The fitted model objects are saved for the results tutorial, where they are used to produce AIC tables, abundance estimates, density maps, and covariate-effect plots.
+
+```{r save-models}
+save(
+  m0, m1, m2, m3, m4, m5,
+  file = output_file
+)
+```
+
+# What comes next
+
+The next tutorial summarises these fitted models, estimates abundance and density over the Namkha survey area, maps the predicted density surface, and plots fitted relationships with covariates.

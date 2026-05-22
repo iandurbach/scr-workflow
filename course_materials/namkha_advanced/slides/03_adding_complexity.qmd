@@ -1,0 +1,1100 @@
+---
+title: Adding complexity
+subtitle: Namkha advanced tutorial
+author: |
+  | Snow leopard SECR workflow workshop
+  | Ian Durbach and Cornelia Oedekoven
+institute: |
+  | Centre for Research into Ecological & Environmental Modelling
+  | University of St Andrews
+fontsize: 10pt
+format:
+  beamer:
+    theme: metropolis
+    incremental: false
+    slide-level: 2
+    pdf-engine: xelatex
+    syntax-highlighting: tango
+classoption: t
+urlcolor: teal
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(knitr)
+library(secr)
+library(dplyr)
+library(sf)
+library(ggplot2)
+library(MASS)
+
+source("../../namkha_basic/code/more-utilities.R")
+
+knitr::opts_knit$set(global.par = TRUE)
+knitr::opts_chunk$set(fig.path = "code-and-figures/")
+
+def.chunk.hook <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(
+  chunk = function(x, options) {
+    x <- def.chunk.hook(x, options)
+    chunk_size <- if (is.null(options$size)) "normalsize" else options$size
+    ifelse(
+      chunk_size != "normalsize",
+      paste0("\n \\", chunk_size, "\n\n", x, "\n\n \\normalsize"),
+      x
+    )
+  }
+)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) {
+    if (length(x) > lines) {
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+
+load("../output/namkha_advanced_secr_inputs_capthist.RData")
+load("../output/namkha_advanced_secr_inputs_mask.RData")
+load("../output/namkha_advanced_secr_inputs_msmask.RData")
+load("../output/namkha_advanced_fitted_models_full.RData")
+load("../output/namkha_advanced_fitted_models_short.RData")
+load("../output/namkha_advanced_fitted_models_ms.RData")
+
+sex_env <- new.env()
+load("../output/namkha_advanced_fitted_models_full_sex.RData", envir = sex_env)
+sex_f0 <- sex_env$f0
+sex_f1 <- sex_env$f1
+sex_f2 <- sex_env$f2
+sex_f3 <- sex_env$f3
+sex_f4 <- sex_env$f4
+sex_f0g <- sex_env$f0g
+sex_f1g <- sex_env$f1g
+sex_f2g <- sex_env$f2g
+sex_f3g <- sex_env$f3g
+sex_f4g <- sex_env$f4g
+
+full_results <- read.csv("../output/results/full/namkha_advanced_results_abundance_AIC_full.csv")
+short_results <- read.csv("../output/results/short/namkha_advanced_results_abundance_AIC_short.csv")
+ms_results <- read.csv("../output/results/ms/namkha_advanced_results_abundance_AIC_ms.csv")
+```
+
+## Session 3 objectives
+
+Main goal: Show where the simple workflow has to change when the analysis gets more realistic.
+
+1. Longer survey periods and closure
+2. Shortened-survey and multisession alternatives
+3. Elevation constraints and reporting masks
+4. Gorge-avoiding movement distances
+5. Sex-specific model components
+
+\vspace{0.4cm}
+
+\alert{Assumption:} You have already seen the simple workflow from Session 2.
+
+## From simple to advanced
+
+The basic workflow stays the same:
+
+\begin{tikzpicture}[remember picture, overlay]
+\node[xshift=-4.5cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{01}\\
+       camera file\\
+       detection file\\
+       $\Rightarrow$ \\
+       \texttt{capthist}
+      \end{minipage}};
+\node[xshift=-2.25cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{02}\\
+       survey area\\
+       buffer\\
+       covariates\\
+       $\Rightarrow$ \\
+       \texttt{mask}
+      \end{minipage}};
+\node[xshift=0cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.17\textwidth}
+       \textbf{03}\\
+       (crop for \\ 
+       multisession \\
+       model) \\
+       $\Rightarrow$ \\
+       \texttt{mask (ms)}
+      \end{minipage}};
+\node[xshift=2.25cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{04}\\
+       $D$ model\\
+       $\lambda_0$/$g_0$ model\\
+       $\Rightarrow$ \\
+       \texttt{secr.fit}
+      \end{minipage}};
+\node[xshift=4.5cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{05}\\
+       AICc\\
+       abundance\\
+       density\\
+       maps
+      \end{minipage}};
+\end{tikzpicture}
+
+Each extension affects a specific part of the workflow.
+
+# Extension 1: Long surveys and closure
+
+## Extension 1: Long surveys and closure
+
+\alert{Problem:} the full survey is long enough that the closed-population assumption may be questionable.
+
+\alert{Implementation:}
+
+- keep the full survey
+- create a shortened survey window
+- split the full survey into temporal sessions
+- compare how results change
+
+\vspace{0.3cm}
+
+Scripts involved:
+
+- `01_make_capthist.R`
+- `03_make_ms_masks.R`
+- `04a`, `04b`, `04c`
+- `05a`, `05b`, `05c`
+
+## Full survey: occasion-specific usage
+
+`secr` implements closure checks. These need multiple occasions (no other need for these i.e. for model fitting)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+full_occ_length <- 14 
+full_occ_start <- seq.Date(from = survey_start, to = survey_end,
+                           by = paste(full_occ_length, "days"))
+full_occ_bins <- interval(start = full_occ_start, 
+                          end = full_occ_end)
+```
+\normalsize
+
+For each camera and occasion, need to recalculate effort (days active)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|4"
+#| eval: false
+#| echo: true
+usage_full <- matrix(0, nrow = nrow(cameras), ncol = length(full_occ_bins))
+for (i in seq_len(nrow(cameras))) {
+  usage_full[i, ] <- round(as.numeric(
+    int_overlaps_numeric(cameras$camera_on[i], full_occ_bins)) / (24 * 60 * 60))
+}
+usage(full_traps) <- usage_full
+```
+\normalsize
+
+## Full survey: descriptive check
+
+\begin{columns}[T]
+  \begin{column}{0.7\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../output/fig/namkha_capture_history_summary.png}
+  \end{column}
+
+  \begin{column}{0.3\textwidth}
+  \vspace{1.7em}
+    \begin{itemize}
+      \item cameras started at different times
+      \item new animals appear through time
+      \item shortened window is a defensible alternative
+      \item session split is another alternative
+    \end{itemize}
+  \end{column}
+\end{columns}
+
+## Full survey: closure checks
+
+The full survey occasions allow a formal closure check
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+closure.test(full_ch)
+```
+\normalsize
+
+\vspace{.6em}
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+closure.test(full_ch)
+```
+\normalsize
+
+Suggests moderate concern about closure. Now check closure for the shortened survey
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+short_occasion_start <- floor(as.numeric(short_survey_start - survey_start) /
+                              full_occ_length) + 1
+short_occasion_end <- floor(as.numeric(short_survey_end - survey_start) /
+                            full_occ_length) + 1
+
+closure.test(subset(full_ch, occasions = short_occasion_start:short_occasion_end))
+```
+\normalsize
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+short_occasion_start <- floor(as.numeric(short_survey_start - survey_start) /
+                              full_occ_length) + 1
+short_occasion_end <- floor(as.numeric(short_survey_end - survey_start) /
+                            full_occ_length) + 1
+
+closure.test(subset(full_ch, occasions = short_occasion_start:short_occasion_end))
+```
+
+Much less (no) evidence against closure.
+
+## Shortened survey: workflow change
+
+\alert{Key idea:} limit survey length by taking a subset of the full survey \\
+\alert{Issue:} Which part of the full survey to take?
+
+\vspace{.6em}
+
+Keep only detections in the shortened window
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+short_capts_raw <- capts_raw |>
+  filter(date >= short_survey_start, date <= short_survey_end)
+```
+\normalsize
+
+Recalculate camera effort for that same window
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+short_traps_df <- cameras |>
+  mutate(
+    effort_short = pmax(
+      0,
+      as.numeric(pmin(end_date, short_survey_end) -
+                 pmax(start_date, short_survey_start), units = "days")
+    )
+  )
+```
+\normalsize
+
+## Shortened survey: `capthist`
+
+Create and check the capture history
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|2|3"
+#| eval: false
+#| echo: true
+short_capts <- short_capts_raw |>
+  mutate(occasion = 1L) |>
+  dplyr::select(session, animalID, occasion, trapID, sex)
+
+short_ch <- make.capthist(captures = short_capts, traps = short_traps)
+verify(short_ch)
+summary(short_ch, terse = TRUE)
+```
+\normalsize
+
+\vspace{.6em}
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+summary(short_ch, terse = TRUE)
+```
+
+## Multisession survey: workflow change
+
+\alert{Key idea:} keep the full survey but split it into temporal sessions.
+
+Detections get a session label:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ms_capts <- capts_raw |>
+  mutate(
+    session = if_else(date < ms_session_end, 1L, 2L),
+    occasion = 1L
+  ) |> dplyr::select(session, animalID, occasion, trapID, sex)
+```
+\normalsize
+
+Camera effort is calculated separately for each session:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ms_traps_df <- cameras |>
+  mutate(
+    effort_s1 = pmax(0, as.numeric(pmin(end_date, ms_session_end - days(1)) -
+                                   pmax(start_date, survey_start), 
+                                   units = "days")),
+    effort_s2 = pmax(0, as.numeric(pmin(end_date, survey_end) -
+                                   pmax(start_date, ms_session_end), 
+                                   units = "days"))
+  )
+```
+\normalsize
+
+## Multisession survey: `capthist`
+
+For multisession `secr`, the traps object is a named list:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ms_traps_list <- split(ms_traps_df, f = ms_traps_df$session)
+traps_ms <- vector("list", length(ms_traps_list))
+
+for (i in seq_along(ms_traps_list)) {
+  traps_ms[[i]] <- read.traps(
+    data = ms_traps_list[[i]] |> dplyr::select(trapID, x, y, effort),
+    detector = "count",
+    trapID = "trapID",
+    binary.usage = FALSE
+  )
+}
+names(traps_ms) <- c("1", "2")
+```
+\normalsize
+
+Then add covariates, etc.
+
+## Multisession survey: factor levels
+
+Create and check the multisession capture history:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ch_ms <- make.capthist(captures = ms_capts, traps = traps_ms)
+verify(ch_ms)
+```
+\normalsize
+
+Make sure to share factor levels across sessions:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|2"
+#| eval: false
+#| echo: true
+ch_ms <- shareFactorLevels(ch_ms, stringsAsFactors = FALSE)
+verify(ch_ms)
+summary(ch_ms, terse = TRUE)
+```
+\normalsize
+
+\vspace{.6em}
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+t(summary(ch_ms, terse = TRUE))
+```
+\normalsize
+
+# Extension 2: Elevation constraints and reporting masks
+
+## Extension 2: Elevation constraints
+
+\alert{Problem:} not every point in the trap buffer is plausible snow leopard habitat.
+
+\alert{Implementation:}
+
+- add elevation to the full mask
+- restrict mask points to plausible elevation range
+- keep separate masks for fitting and reporting
+- save scaling information for covariate effect plots
+
+## Add elevation to the mask
+
+Elevation is downloaded and saved if not available already:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+elev_file <- "namkha_advanced/output/cache/namkha_elevation.tif"
+
+if (file.exists(elev_file)) {
+  elev <- rast(elev_file)
+} else {
+  elev_download <- get_elev_raster(locations = full_region_4326,
+                                   z = 10, clip = "locations")
+  elev <- rast(elev_download)
+  writeRaster(elev, elev_file, overwrite = TRUE)
+}
+```
+\normalsize
+
+Then project and attach it to the mask:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+elev <- project(elev, y = my_crs)
+names(elev) <- "elev"
+mask <- addCovariates(mask, elev)
+```
+\normalsize
+
+## Restrict masks by elevation
+
+We use 3000--5500 m as the plausible elevation range.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+inside_elev_range <- covariates(mask)$elev >= elev_min &
+  covariates(mask)$elev <= elev_max
+mask_elev <- subset(mask, subset = inside_elev_range)
+```
+\normalsize
+
+Then create reporting and fitting masks.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_survey_area_elev <- subset(mask_elev, subset = inside_survey_area_elev)
+mask_model <- subset(mask_elev, subset = inside_buffer_elev)
+```
+\normalsize
+
+## Fitting mask versus reporting mask
+
+\alert{Fitting mask:} `mask_model`
+
+- elevation-constrained
+- within the trap buffer
+- can include activity centres outside Namkha
+
+\vspace{0.3cm}
+
+\alert{Reporting mask:} `mask_survey_area_elev`
+
+- elevation-constrained
+- inside the Namkha survey boundary
+- used for abundance, density, maps, and covariate summaries
+
+\vspace{0.3cm}
+
+Same conceptual split as Session 2, but now with an extra habitat constraint.
+
+# Extension 3: Barriers and custom movement distances
+
+## Extension 3: Gorge-avoiding movement
+
+\alert{Problem:} Euclidean distance says animals can move straight through the gorge.
+
+\alert{Implementation:}
+
+- read the gorge geometry
+- make a fine mask for path calculations
+- calculate shortest-path distances with `nedist()`
+- pass those distances to `secr.fit()` using `details`
+
+## Read the gorge
+
+The gorge is a polygon that must be in the same CRS as traps and masks.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+gorge <- st_read(".../namkha_gorge.kml") |>
+  st_transform(my_crs) |>
+  st_geometry()
+```
+\normalsize
+
+\begin{center}
+\includegraphics[height=2in]{../output/results/full/namkha_advanced_survey_region_full.png}
+\end{center}
+
+## Fine mask for movement distances
+
+Gorge is narrower than existing mask spacing, so shortest-path calculations will be inaccurate. Use a finer mask to calculate distances around the gorge.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_fine <- make.mask(
+  traps = full_traps,
+  buffer = mask_buffer,
+  type = "trapbuffer",
+  spacing = 200,
+  poly = gorge,
+  poly.habitat = FALSE,
+  keep.poly = FALSE
+)
+```
+\normalsize
+
+\alert{Note:} Still use the normal model mask for model fitting.
+
+## Non-Euclidean distance matrix
+
+`nedist()` calculates distances from traps to mask points, using the fine mask as the movement network.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|5"
+#| eval: false
+#| echo: true
+userd <- nedist(
+  full_traps,
+  mask,
+  mask_fine,
+  directions = 16
+)
+```
+\normalsize
+
+Each cropped mask needs its own `userdist` (this is just a subsetting of rows and columns of the full `userdist`)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+userd_elev <- userd[, inside_elev_range, drop = FALSE]
+userd_model <- userd_elev[, inside_buffer_elev, drop = FALSE]
+userd_survey_area_elev <- userd_elev[, inside_survey_area_elev, drop = FALSE]
+```
+\normalsize
+
+## Non-Euclidean distance check
+
+\begin{columns}[T] % align at top
+  \begin{column}{0.7\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{code-and-figures/plot-userdist-example-1.png}
+  \end{column}
+
+  \begin{column}{0.3\textwidth}
+  \vspace{2em}
+    \begin{itemize}
+      \item distance from camera `TPC13` to each mask point
+      \item points across the gorge are farther away than straight-line distance suggests
+    \end{itemize}
+  \end{column}
+\end{columns}
+
+## Use `userdist` in model fitting
+
+This is the key change to `secr.fit()`:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "6"
+#| eval: false
+#| echo: true
+f0 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  trace = FALSE
+)
+```
+\normalsize
+
+The model still uses `mask_model`; only the movement distances have changed.
+
+# Extension 4: Multisession masks and distances
+
+## Extension 4: Multisession masks
+
+\alert{Problem:} `ch_ms` has multiple sessions, so model fitting needs one mask per session.
+
+\alert{Implementation:}
+
+- build a trap-buffer polygon for each session
+- crop the elevation-constrained mask to each session
+- create one `userdist` matrix per session
+- keep names aligned with `traps_ms`
+
+## One mask per session
+
+Create polygons around traps active in each session:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_per_session_sf <- list()
+for (i in seq_along(traps_ms)) {
+  mask_per_session_sf[[i]] <- st_as_sf(traps_ms[[i]],
+                                       coords = c("x", "y"), crs = my_crs) |>
+    st_buffer(mask_buffer) |>
+    st_union()
+}
+names(mask_per_session_sf) <- names(traps_ms)
+```
+\normalsize
+
+Crop the full elevation mask:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_ms <- list()
+for (i in seq_along(mask_per_session_sf)) {
+  mask_in <- lengths(st_intersects(mask_elev_sf,
+                                   mask_per_session_sf[[i]])) > 0
+  mask_ms[[i]] <- subset(mask_elev, subset = mask_in)
+}
+names(mask_ms) <- names(traps_ms)
+```
+\normalsize
+
+## One `userdist` per session
+
+Use the same mask indicator to subset the full distance matrix:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|5"
+#| eval: false
+#| echo: true
+userd_ms <- list()
+for (i in seq_along(mask_per_session_sf)) {
+  mask_in <- lengths(st_intersects(mask_elev_sf,
+                                   mask_per_session_sf[[i]])) > 0
+  userd_ms[[i]] <- userd_elev[, mask_in, drop = FALSE]
+}
+names(userd_ms) <- names(traps_ms)
+```
+\normalsize
+
+The names of `mask_ms`, `userd_ms`, and `traps_ms` should all match.
+
+## Fit multisession models
+
+The fitting call uses lists for `mask` and `userdist`:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "4|6"
+#| eval: false
+#| echo: true
+ms0 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  trace = FALSE
+)
+```
+\normalsize
+
+Multisession analyses also good when sessions are spatial (geographically separate surveys that you want to combine)
+
+## Multisession model set
+
+Can share parameters across sessions:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ms1 <- secr.fit(ch_ms, detectfn = "HHN", mask = mask_ms,
+                model = list(D ~ std_tri, lambda0 ~ 1, sigma ~ 1),
+                details = list(userdist = userd_ms), start = ms0)
+```
+\normalsize
+
+Or include session as a covariate:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+ms5 <- secr.fit(ch_ms, detectfn = "HHN", mask = mask_ms,
+                model = list(D ~ session, lambda0 ~ 1, sigma ~ 1),
+                details = list(userdist = userd_ms), start = ms0)
+```
+\normalsize
+
+\alert{Note:} How to extrapolate from session-specific covariate models to a wider region is unclear.
+
+# Extension 5: Sex-specific models
+
+## Extension 5: Sex-specific models
+
+\alert{Problem 1:} detection or density may differ by sex 
+\alert{Problem 2:} sex not known for all animals
+
+Two approaches:
+
+1. `hcov = "sex"`: individual covariate models (Problem 1 & 2)
+2. `groups = "sex"`: grouped real-parameter models (Problem 1 only)
+
+\vspace{0.3cm}
+
+\alert{Important:} do not compare the `hcov` and `groups` models with each other (or with other secr models) using AIC.
+
+## Sex as an individual covariate
+
+`hcov = "sex"` are finite mixture models that retain animals with unknown sex.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "5|6"
+#| eval: false
+#| echo: true
+f0 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ h2, sigma ~ 1),
+  hcov = "sex",
+  details = list(userdist = userd_model),
+  verify = FALSE
+)
+```
+\normalsize
+
+`h2` is the term used by `secr` for the first two levels of the individual covariate.
+
+## Sex as groups
+
+Grouped models estimate separate real parameters by sex, but animals with unknown sex must be removed:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+full_ch_known_sex <- subset(
+  full_ch,
+  subset = covariates(full_ch)$sex != "Unknown"
+)
+full_ch_known_sex <- shareFactorLevels(full_ch_known_sex)
+```
+\normalsize
+
+Then fit grouped models:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "5"
+#| eval: false
+#| echo: true
+f0g <- secr.fit(
+  full_ch_known_sex,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ g, sigma ~ 1),
+  groups = "sex",
+  details = list(userdist = userd_model)
+)
+```
+\normalsize
+
+## Sex-specific model comparison
+
+Compare each sex-specific candidate set internally:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+AIC(sex_f0, sex_f1, sex_f2, sex_f3, sex_f4, criterion = "AICc")
+```
+\normalsize
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+sex_hcov_aic <- AIC(sex_f0, sex_f1, sex_f2, sex_f3, sex_f4, criterion = "AICc")
+data.frame(
+  modelname = row.names(sex_hcov_aic),
+  sex_hcov_aic[, c("AICc", "dAICc", "AICcwt")]
+)
+```
+
+## Sex-specific model comparison
+
+Compare each sex-specific candidate set internally:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+AIC(sex_f0g, sex_f1g, sex_f2g, sex_f3g, sex_f4g, criterion = "AICc")
+```
+\normalsize
+
+\vspace{.4em}
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+sex_group_aic <- AIC(sex_f0g, sex_f1g, sex_f2g, sex_f3g, sex_f4g, criterion = "AICc")
+data.frame(
+  modelname = row.names(sex_group_aic),
+  sex_group_aic[, c("AICc", "dAICc", "AICcwt")]
+)
+```
+\normalsize
+
+## Sex-specific model comparison
+
+Finite mixtures, best model:
+
+```{r}
+#| eval: true
+#| echo: true
+predict(sex_f3)
+```
+
+## Sex-specific model comparison
+
+Groups, best model:
+
+```{r}
+#| eval: true
+#| echo: true
+predict(sex_f3g)
+```
+
+# Extension 6: Advanced reporting
+
+## Extension 6: Advanced reporting
+
+Reporting follows the Session 2 pattern:
+
+- choose fitted models
+- choose reporting mask
+- estimate abundance with `region.N()`
+- convert abundance to density
+- join with AICc
+- make maps and covariate-effect plots
+
+\vspace{0.3cm}
+
+\alert{Main change:} If reporting over a new mask, replace `userdist` with the matching distance matrix.
+
+Other reporting code works more or less like before (see scripts and vignette for details).
+
+## Reporting mask and `userdist`
+
+Choose the reporting mask:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+extrap_mask <- mask_survey_area_elev
+extrap_mask_userd <- userd_survey_area_elev
+```
+\normalsize
+
+Copy the fitted models and swap the distance matrix:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "2"
+#| eval: false
+#| echo: true
+fitted_models_region <- lapply(fitted_models, function(model) {
+  model$details$userdist <- extrap_mask_userd
+  model
+})
+```
+\normalsize
+
+Now fitted models stored in `fitted_models_region` can be used to extrapolate to the reporting mask (e.g. abundance, maps).
+
+## Comparing full, short, multisession surveys
+
+Full survey:
+
+\scriptsize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+full_results |>
+  dplyr::select(modelname, AICc, dAICc, estimate, D, CV) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+\normalsize
+
+Short survey:
+
+\vspace{.4em}
+\scriptsize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+short_results |>
+  dplyr::select(modelname, AICc, dAICc, estimate, D, CV) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+\normalsize
+
+Multisession survey may return session-specific results (not here).
+
+\scriptsize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+ms_results |>
+  filter(session == 1) |> 
+  dplyr::select(modelname, AICc, dAICc, estimate, D, CV) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+\normalsize
+
+## Predicted density maps
+
+\begin{columns}[T]
+  \begin{column}{0.5\textwidth}
+    \centering
+    Full survey
+
+    \includegraphics[width=\linewidth]{../output/results/full/namkha_advanced_predicted_density_full.png}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    \centering
+    Shortened survey
+
+    \includegraphics[width=\linewidth]{../output/results/short/namkha_advanced_predicted_density_short.png}
+  \end{column}
+\end{columns}
+
+## Predicted density maps
+
+\begin{columns}[T]
+  \begin{column}{0.5\textwidth}
+    \centering
+    Multisession session 1
+
+    \includegraphics[width=\linewidth]{../output/results/ms/namkha_advanced_predicted_density_ms_session_1.png}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    \centering
+    Multisession session 2
+
+    \includegraphics[width=\linewidth]{../output/results/ms/namkha_advanced_predicted_density_ms_session_2.png}
+  \end{column}
+\end{columns}
+
+## Workflow recap
+
+\vspace{1em}
+
+1. Long surveys require thinking about closure. \vspace{0.7em}
+2. Shortened surveys and multisession analyses change both captures and effort. \vspace{0.7em}
+3. Habitat constraints change masks for fitting and reporting. \vspace{0.7em}
+4. Barriers change movement distances, not the capture-history object. \vspace{0.7em}
+5. Sex-specific models require careful handling of unknown sex and AIC comparisons. \vspace{0.7em}
+6. Extrapolation to a new mask needs a `userdist` that matches.

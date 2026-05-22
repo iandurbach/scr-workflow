@@ -1,0 +1,23 @@
+services:
+  rstudio:
+    image: ${DOCKER_IMAGE:-iandurbach/secr-workflow-rstudio:latest}
+    container_name: ${CONTAINER_NAME:-secr-workshop}
+    ports:
+      - "${RSTUDIO_BIND_ADDRESS:-127.0.0.1}:${RSTUDIO_PORT:-8787}:8787"
+    environment:
+      TZ: ${TZ:-UTC}
+      PASSWORD: ${RSTUDIO_ADMIN_PASSWORD:-workshop}
+      ROOT: ${RSTUDIO_ROOT:-false}
+      WORKSHOP_PASSWORD: ${WORKSHOP_PASSWORD:-workshop}
+      WORKSHOP_USER_COUNT: ${WORKSHOP_USER_COUNT:-0}
+      WORKSHOP_USERS_PREFIX: ${WORKSHOP_USERS_PREFIX:-participant}
+      WORKSHOP_USERS: ${WORKSHOP_USERS:-}
+      WORKSHOP_CREATE_INSTRUCTOR: ${WORKSHOP_CREATE_INSTRUCTOR:-false}
+      WORKSHOP_INSTRUCTOR_USER: ${WORKSHOP_INSTRUCTOR_USER:-instructor}
+      COURSE_MATERIALS_DIR: /home/rstudio/course_materials
+      PARTICIPANT_WORK_DIR: /home/rstudio/my_work
+    volumes:
+      - ./course_materials:/home/rstudio/course_materials:ro
+      - ./my_work:/home/rstudio/my_work
+    shm_size: "1gb"
+    restart: unless-stopped

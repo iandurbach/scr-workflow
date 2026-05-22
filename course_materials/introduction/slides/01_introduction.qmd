@@ -1,0 +1,406 @@
+---
+title: Simple SECR workflow
+subtitle: Introduction
+author: |
+  | Snow leopard SECR workflow workshop
+  | Ian Durbach and Cornelia Oedekoven
+institute: |
+  | Centre for Research into Ecological & Environmental Modelling
+  | University of St Andrews
+fontsize: 10pt
+format:
+  beamer:
+    theme: metropolis
+    incremental: false
+    slide-level: 2
+    pdf-engine: xelatex
+    syntax-highlighting: tango
+classoption: t
+urlcolor: teal
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(knitr)
+library(secr)
+library(dplyr)
+library(ggplot2)
+library(MASS)
+source("../../namkha_basic/code//more-utilities.R")
+
+knitr::opts_knit$set(global.par = TRUE)
+knitr::opts_chunk$set(fig.path = "code-and-figures/")
+
+def.chunk.hook <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(
+  chunk = function(x, options) {
+    x <- def.chunk.hook(x, options)
+    chunk_size <- if (is.null(options$size)) "normalsize" else options$size
+    ifelse(
+      chunk_size != "normalsize",
+      paste0("\n \\", chunk_size, "\n\n", x, "\n\n \\normalsize"),
+      x
+    )
+  }
+)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) {
+    if (length(x) > lines) {
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+
+load("../../namkha_basic/output/namkha_basic_secr_inputs_capthist.RData")
+load("../../namkha_basic/output/namkha_basic_secr_inputs_mask.RData")
+load("../../namkha_basic/output/namkha_basic_fitted_models.RData")
+traps_df <- read.csv("../../namkha_basic/data/traps.csv")
+caps_df <- read.csv("../../namkha_basic/data/detections.csv")
+extrap_mask <- mask_survey_area
+```
+
+## Welcome
+
+A standardized workflow for designing and analyzing camera trap surveys of large cats with spatially explicit capture-recapture (SCR).
+
+-   Session 1: Concepts
+-   Session 2: Simple workflow
+-   Session 3: Adding complexity
+-   Session 4: Automatic checks of data integrity
+-   Session 5: Wrap up
+
+## Welcome
+
+A standardized workflow for designing and analyzing camera trap surveys of large cats with spatially explicit capture-recapture (SCR).
+
+-   Session 1: Concepts
+-   Session 2: Simple workflow
+-   Session 3: Adding complexity
+-   Session 4: Automatic checks of data integrity
+-   Session 5: Wrap up
+
+What we expect from participants:
+
+-   Some knowledge on statistics
+-   Know how to work with R and RStudio
+
+
+## Ready for the practicals
+
+Data: 
+
+1. Download from XXXXXXXXX
+2. Unzip into dedicated `secr` workshop folder
+
+Software required:
+
+1.  R: <https://cran.rstudio.com/>
+2.  RStudio: <https://posit.co/download/rstudio-desktop>
+3.  R packages (and dependencies): \vspace{.6em}
+
+\centering
+\begin{columns}[T] % align at top
+  \begin{column}{0.25\textwidth}
+  \end{column}
+  \begin{column}{0.25\textwidth}
+  \vspace{1em}
+    \begin{itemize}
+     \item dplyr
+     \item elevatr
+     \item gdistance
+     \item ggplot2
+     \item lubridate
+     \item MASS
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.25\textwidth}
+  \vspace{1em}
+    \begin{itemize}
+      \item patchwork
+      \item secr
+      \item sf
+      \item stringr
+      \item tidyr
+      \item terra
+    \end{itemize}
+  \end{column}
+  \begin{column}{0.25\textwidth}
+  \end{column}
+\end{columns}
+
+
+## Session 1 objectives
+
+\vspace{5.6em}
+
+Main goal: Understand the concepts of SCR surveys and be ready for the practicals
+
+## Concepts
+
+\vspace{5.6em}
+
+1.  Ecological surveys and sampling
+2.  Capture-recapture surveys
+3.  Spatial capture-recapture surveys
+
+## Population and sample
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro1.png}
+\end{center}
+
+## Population and sample
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro2.png}
+\end{center}
+
+## Snow leopards: Individual IDs 
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/snowleopards.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR)
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro3.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR)
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro4.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR)
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro5.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR)
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro6.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR)
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intro7.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR): Capture histories
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/caphist1.png}
+\end{center}
+
+## (Non-spatial) capture-recapture (CR): Capture histories
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/caphist2.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Single/multi catch traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr1.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Single/multi catch traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr2.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Single/multi catch traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr3.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Single/multi catch traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr4.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Count traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr5.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Activity centre
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr6.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Activity centre
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr7.png}
+\end{center}
+
+## Spatial capture-recapture (SCR): Detector types
+
+
+: **SCR (`secr`) detector types**
+
+| **Category** | **Type (conceptual)** | **`secr` name** |
+|:----|:-----------------------------|:-------|
+| **Point** | Single-capture trap (1 animal at a time) | single |
+| | Multi-capture trap (multiple animals) | multi |
+| | Proximity detector (non-exclusive detection) | proximity |
+| | Count detector (multiple detections per occasion) | count |
+| | Binary proximity with cap of 1 detection | capped |
+| | Acoustic / signal-based detector | signal |
+| **Area** | Area search detector | polygon |
+| | Area search with independent subdetectors | polygonX |
+| **Line** | Linear search detector | transect |
+|  | Linear search with independent subdetectors | transectX |
+
+
+## Spatial capture-recapture (SCR): What we know / observe
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr8.png}
+\end{center}
+
+## SCR: What we want to know: abundance / density 
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/scr9.png}
+\end{center}
+
+## SCR: How `secr` does it: Mask and buffer
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/mask.png}
+\end{center}
+
+
+## SCR: How `secr` does it: Activity centres
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/intensity.png}
+\end{center}
+
+
+## SCR: Models
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/models.png}
+\end{center}
+\vspace{.6em}
+
+
+## Spatial capture-recapture: Data
+\footnotesize
+
+```{r}
+#| eval: true
+#| echo: true
+
+head(traps_df, 3)
+head(caps_df, 3)
+```
+\normalsize
+
+
+## Spatial capture-recapture (SCR): Assumptions
+
+: **SCR Assumptions**
+
+| # | Assumption | Description |
+|:--|:----------|:---------------------------|
+| 1 | Population closure | No births, deaths, immigration, or emigration occur during the sampling period. |
+| 2 | Fixed activity centres | Each individual has a stable activity centre that does not change during the study. |
+| 3 | Distance-dependent detection | Detection probability declines monotonically with distance from an individual’s activity centre. |
+| 4 | Independence of detections | Detection events are independent across individuals and sampling occasions (conditional on model parameters). |
+
+## Spatial capture-recapture (SCR): Assumptions
+
+: **SCR Assumptions**
+
+| # | Assumption | Description |
+|:--|:----------|:---------------------------|
+| 5 | Correct individual identification | All individuals are uniquely and correctly identified with no mis-classification errors. |
+| 6 | Known detector locations | Trap or detector locations are fixed and known without error. |
+| 7 | Detection homogeneity or modeled variation | Detection parameters are either constant across individuals or heterogeneity is explicitly modeled (e.g., via covariates). |
+| 8 | Activity centre distribution | Activity centres arise from a defined spatial point process (often uniform or Poisson) within the state space. |
+| 9 | Known sampling effort | Sampling effort, including detector operation and timing, is accurately recorded and incorporated into the model. |
+
+## Spatial capture-recapture (SCR): Terminology
+
+\footnotesize
+
+: **SCR terminology and definitions (1)**
+
+| Term | Definition |
+|:-------|:----------------------------------------|
+| Capture history | A record of detections for each individual across detectors and sampling occasions. |
+| Detector (trap) | A device or method used to detect individuals (e.g., camera trap, hair snare, acoustic recorder). |
+| Detector array | The spatial configuration of all detectors used in the study. |
+| Activity centre | The latent (unobserved) central location of an individual’s home range, assumed fixed during the study. |
+| State space | The spatial region that contains all possible activity centres of individuals in the population. |
+| Mask | A discretized representation of the state space used in computation (grid of possible activity centre locations). |
+| Buffer | An added margin around the detector array to ensure the state space includes all individuals that could be detected. |
+
+\normalsize
+
+## Spatial capture-recapture (SCR): Terminology
+
+\footnotesize
+
+: **SCR terminology and definitions (2)**
+
+
+| Term | Definition |
+|:-------|:----------------------------------------|
+| Session | A distinct sampling period with its own detector array, effort, and capture data (e.g., a study site or year). |
+| Occasion | A within-session sampling period (e.g., day, night, week) during which detections are recorded. |
+| Effort | Information on when and where detectors were active; used to correctly model detection probability. |
+| Detection function | A function describing how detection probability declines with distance from the activity centre. |
+| g0 | The probability of detecting an individual at its activity centre (i.e., distance = 0). |
+| $σ$ (sigma) | Spatial scale parameter governing how quickly detection probability declines with distance. |
+| Density (D) | The number of individuals per unit area. |
+
+\normalsize
+
+## Spatial capture-recapture (SCR): Terminology
+
+\footnotesize
+
+: **SCR terminology and definitions (3)**
+
+| Term | Definition |
+|:-------|:----------------------------------------|
+| Encounter model | The statistical model describing how detections arise from the spatial process and detection process. |
+| Spatial point process | The probabilistic model describing the distribution of activity centres across space. |
+| Likelihood | The probability of observing the data given model parameters; used for parameter estimation. |
+| Inhomogeneous density | A model where density varies across space as a function of environmental covariates. |
+| Homogeneous density | A model assuming constant density across the state space. |
+
+\normalsize
+

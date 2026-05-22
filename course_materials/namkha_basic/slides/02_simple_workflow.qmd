@@ -1,0 +1,1118 @@
+---
+title: Simple SECR workflow
+subtitle: Namkha basic tutorial
+author: |
+  | Snow leopard SECR workflow workshop
+  | Ian Durbach and Cornelia Oedekoven
+institute: |
+  | Centre for Research into Ecological & Environmental Modelling
+  | University of St Andrews
+fontsize: 10pt
+format:
+  beamer:
+    theme: metropolis
+    incremental: false
+    slide-level: 2
+    pdf-engine: xelatex
+    syntax-highlighting: tango
+classoption: t
+urlcolor: teal
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(knitr)
+library(secr)
+library(dplyr)
+library(ggplot2)
+library(MASS)
+source("../code//more-utilities.R")
+
+knitr::opts_knit$set(global.par = TRUE)
+knitr::opts_chunk$set(fig.path = "code-and-figures/")
+
+def.chunk.hook <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(
+  chunk = function(x, options) {
+    x <- def.chunk.hook(x, options)
+    chunk_size <- if (is.null(options$size)) "normalsize" else options$size
+    ifelse(
+      chunk_size != "normalsize",
+      paste0("\n \\", chunk_size, "\n\n", x, "\n\n \\normalsize"),
+      x
+    )
+  }
+)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) {
+    if (length(x) > lines) {
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+
+load("../output/namkha_basic_secr_inputs_capthist.RData")
+load("../output/namkha_basic_secr_inputs_mask.RData")
+load("../output/namkha_basic_fitted_models.RData")
+extrap_mask <- mask_survey_area
+```
+
+## Session 2 objectives
+
+Main goal: Demonstrate the workflow with a simple example where everything "works":
+
+1. Create a single-session `capthist` object from camera and detection files
+2. Build habitat masks for model fitting and reporting
+3. Fit a set of `secr` models
+4. Turn fitted models into density, abundance, maps, and checks
+
+\vspace{0.4cm}
+
+The emphasis is the workflow: what each object means and how the scripts connect.
+
+## The simple workflow
+
+Each script saves the main object needed by the next step:
+
+\begin{tikzpicture}[remember picture, overlay]
+\node[xshift=-4.5cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{01}\\
+       camera file\\
+       detection file\\
+       $\Rightarrow$ \\
+       \texttt{capthist}
+      \end{minipage}};
+\node[xshift=-2.25cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{02}\\
+       survey area\\
+       buffer\\
+       covariates\\
+       $\Rightarrow$ \\
+       \texttt{mask}
+      \end{minipage}};
+\node[xshift=0cm, yshift=-0.8cm, draw=black, fill=red!20,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.17\textwidth}
+       \textbf{03}\\
+       (crop for \\ 
+       multisession \\
+       model) \\
+       $\Rightarrow$ \\
+       \texttt{mask (ms)}
+      \end{minipage}};
+\node[xshift=2.25cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{04}\\
+       $D$ model\\
+       $\lambda_0$/$g_0$ model\\
+       $\Rightarrow$ \\
+       \texttt{secr.fit}
+      \end{minipage}};
+\node[xshift=4.5cm, yshift=-0.8cm, draw=black, fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle,
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][3.5cm][t]{0.15\textwidth}
+       \textbf{05}\\
+       AICc\\
+       abundance\\
+       density\\
+       maps
+      \end{minipage}};
+\end{tikzpicture}
+
+## Capture histories: script `01_make_capthist.R`
+
+`01_make_capthist.R` creates a `capthist` object for `secr`. This contains:
+
+1. the **trapfile**: detector locations and related covariates (a `traps` object)
+2. the **encounter histories**: recorded encounters of animals at detectors (a data frame)
+
+Tasks involved:
+
+- read and clean camera records
+- read detection records
+- encode effort as trap usage
+- attach trap-level covariates
+- create and check a `capthist`
+- save the object for later scripts
+
+## Capture histories: camera data to `traps`
+
+Set file paths and CRS used by the workflow
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+my_crs <- "+proj=utm +zone=44 +datum=WGS84 +units=m +no_defs"
+
+traps_file <- "namkha_basic/data/traps.csv"
+detections_file <- "namkha_basic/data/detections.csv"
+
+output_file <- "namkha_basic/output/namkha_basic_secr_inputs_capthist.RData"
+fig_dir <- "namkha_basic/output/fig"
+```
+\normalsize
+
+Read in the camera location file (intentionally clean but see later!)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+cameras <- read.csv(traps_file, stringsAsFactors = FALSE)
+```
+\normalsize
+
+## Capture histories: camera data to `traps`
+
+\footnotesize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+cameras <- read.csv("../data/traps.csv", stringsAsFactors = FALSE)
+head(cameras, 8)
+```
+\normalsize
+
+## Capture histories: camera data to `traps`
+
+Drop malfunctioning or lost cameras
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+cameras <- cameras |> filter(Note == "Functional") 
+```
+\normalsize
+
+Ensure correct date format
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+cameras <- cameras |>
+  mutate(
+    start_date = as.Date(start_date, format = "%d/%m/%Y"),
+    end_date   = as.Date(end_date,   format = "%d/%m/%Y")
+  )
+```
+\normalsize
+
+Define the overall survey period (here from active cameras)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+survey_start <- min(cameras$start_date, na.rm = TRUE)
+survey_end <- max(cameras$end_date, na.rm = TRUE)
+```
+\normalsize
+
+## Capture histories: camera data to `traps`
+
+Create the `secr` `traps` object
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+traps <- read.traps(
+  data = traps_df |> dplyr::select(trapID, x, y, effort),
+  detector = "count",
+  trapID = "trapID",
+  binary.usage = FALSE
+)
+```
+\normalsize
+
+Add covariates that might influence detectability of animals
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+covariates(traps)$Topography    <- traps_df$Topography
+covariates(traps)$cliff         <- traps_df$cliff
+covariates(traps)$hill          <- traps_df$hill
+covariates(traps)$valley_stream <- traps_df$valley_stream
+covariates(traps)$Water         <- traps_df$Water
+covariates(traps)$Altitude      <- traps_df$Altitude
+```
+\normalsize
+
+## Capture histories: detection data to `capthist`
+
+Read in the detection data (clean; see later for more realistic examples!)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+capts_raw <- read.csv(detections_file, stringsAsFactors = FALSE)
+```
+\normalsize
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+capts_raw <- read.csv("../data/detections.csv", stringsAsFactors = FALSE)
+head(capts_raw, 12)
+```
+\normalsize
+
+## Capture histories: detection data to `capthist`
+
+Only keep detections in the survey period
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|2-3"
+#| eval: false
+#| echo: true
+capts_raw <- capts_raw |>
+  mutate(date = as.Date(date, format = "%m/%d/%Y")) |>
+  filter(date >= survey_start, date <= survey_end)
+```
+\normalsize
+
+Keep variables used by `secr`
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+capts <- capts_raw |>
+  dplyr::select(session, animalID, occasion, trapID, sex)
+```
+\normalsize
+
+Create and inspect the `secr` `capthist` object:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| code-line-numbers: "1|2|3"
+#| eval: false
+#| echo: true
+ch <- make.capthist(captures = capts, traps = traps)
+verify(ch)
+summary(ch, terse = TRUE)
+```
+\normalsize
+
+## Capture histories: descriptive checks
+
+Before fitting models, check that effort and detections are coherent:
+
+\begin{columns}[T] % align at top
+  \begin{column}{0.7\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../output/fig/namkha_capture_history_summary.png}
+  \end{column}
+
+  \begin{column}{0.3\textwidth}
+  \vspace{2em}
+    \begin{itemize}
+      \item do detections occur during active camera periods?
+      \item new individuals distributed over cameras?
+      \item do new individuals keep appearing late in the survey?
+    \end{itemize}
+  \end{column}
+\end{columns}
+
+## Habitat masks: script `02_make_masks.R`
+
+`02_make_masks.R` creates habitat masks (class `mask`) for fitting and prediction.
+
+\alert{Key idea:} 
+
+- Different masks for model fitting and model prediction
+- Model fitting mask needs to include all AC locations animals could be detected from
+- Often want to extrapolate to wider area
+- *But* where these two masks intersect, useful to share mask points
+
+\alert{Implementation:} 
+
+- Create polygons for (1) close to detectors; (2) extrapolation region
+- Find union of these two polygons
+- Make mask (points) in this region
+- Subset this to form model fitting and prediction masks
+
+## Habitat masks: script 02
+
+Tasks involved:
+
+- read the Namkha boundary (extrapolation region)
+- build a trap buffer 
+- create a regular grid of mask points
+- add spatial covariates to the mask
+- save separate masks for fitting and reporting
+
+## Habitat masks: define the region
+
+The full region is the union of the survey boundary and the trap buffer:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_spacing <- 1500
+mask_buffer  <- 25000
+```
+\normalsize
+
+\alert{Aside:} How to choose buffer and spacing?
+
+- Get a rough estimate of $\sigma$ from capthist
+- Rough guesses for buffer = 4$\sigma$, spacing = 0.6$\sigma$
+- Bigger buffers and small spacings are safer but increase run times
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+qnd <- autoini(capthist = ch, mask = make.mask(traps = traps, 
+                                               buffer = 75000, 
+                                               spacing = 1000))
+qnd$sigma * 4    # buffer
+qnd$sigma * 0.6  # spacing
+```
+\normalsize
+
+\vspace{-.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+qnd <- autoini(capthist = ch, 
+               mask = make.mask(traps = traps, 
+                                buffer = 75000, 
+                                spacing = 1000))
+cat("Rough buffer: ", qnd$sigma * 4)    
+cat("Rough spacing: ", qnd$sigma * 0.6)  
+```
+\normalsize
+
+## Habitat masks: define the region
+
+Read in extrapolation region polygon
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+
+survey_area <- st_read("namkha_basic/data/
+                       survey_area/Namkha_RM.shp",
+                       quiet = TRUE) |>
+  st_zm() |>
+  st_transform(my_crs) |>
+  st_geometry()
+```
+\normalsize
+
+Make traps buffer polygon
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+
+traps_buffer <- traps_sf |>
+  st_buffer(mask_buffer) 
+```
+\normalsize
+
+Full region is the union of the two polygons
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+
+full_region <- traps_buffer |>
+  st_union() |>
+  st_geometry()
+```
+\normalsize
+
+## Habitat masks: create the mask
+
+Build a regular grid
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_grid <- st_make_grid(
+  # add a small buffer so don't lose points on boundary
+  st_buffer(full_region, 10000),
+  cellsize = c(mask_spacing, mask_spacing),
+  what = "centers"
+)
+```
+\normalsize
+
+Keep points inside the region
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask_points <- mask_grid[full_region] |>
+  st_as_sf() |>
+  cbind(st_coordinates(.)) |>
+  st_drop_geometry() |>
+  dplyr::select(x = X, y = Y)
+```
+\normalsize
+
+Create and inspect the `secr` `mask` object
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+mask <- read.mask(data = mask_points, spacing = mask_spacing)
+```
+\normalsize
+
+## Habitat masks: add spatial covariates
+
+Density covariates added to mask because they affect possible AC locations. 
+
+Easiest to read in as raster or shape file
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+tri <- rast("namkha_basic/data/spatial_covs/TRI_Namkha.tif")
+# remember to project to same CRS as mask
+tri <- project(tri, y = my_crs)
+names(tri) <- "tri"
+mask <- addCovariates(mask, tri)
+```
+\normalsize
+
+May need some preprocessing (more later on covariates)
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+covariates(mask)$d2hydro <- as.numeric(st_distance(mask_sf, hydro))
+```
+\normalsize
+
+- `mask_model` is used for `secr.fit()`
+- `mask_survey_area` is used for abundance and reporting
+- these can but don't have to differ
+
+## Model fitting: script 04
+
+`04_model_fitting.R` fits a set of candidate models.
+
+- start with the null model
+- add density covariates such as `std_tri` or `std_d2hydro`
+- add detector covariates such as `valley_stream`
+- use AIC for model selection
+
+## Model fitting: adding covariates
+
+Fitting the null model:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+m0 <- secr.fit(ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1)
+)
+```
+\normalsize
+
+`m4` has covariates on density and detection
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+m4 <- secr.fit(ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ valley_stream, sigma ~ 1),
+  start = m0
+)
+```
+\normalsize
+
+## Model fitting: adding covariates
+
+Use AICc or AIC to compare the candidate set after fitting
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+AIC(m0, m1, m2, m3, m4, m5, criterion = "AICc")
+```
+
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+AIC(m0, m1, m2, m3, m4, m5, criterion = "AICc")
+```
+\normalsize
+
+## Interpreting the null model -- m~0~
+
+Type the name of the model for a model summary
+
+\vspace{.6em}
+```{r,eval=TRUE, echo=FALSE, size="scriptsize", output.lines=15}
+m0 # 1 of 3
+```
+
+## Interpreting the null model -- m~0~
+
+Type the name of the model for a model summary
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=FALSE, size="scriptsize", output.lines=16:31}
+m0 # 1 of 3
+```
+
+## Interpreting the null model -- m~0~
+
+Type the name of the model for a model summary
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=FALSE, size="scriptsize", output.lines=32:49}
+m0 # 1 of 3
+```
+
+## Interpreting the null model -- m~0~
+
+- `coef()` for model coefficients on the link scale
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=TRUE, size="scriptsize"}
+coef(m0) 
+```
+
+- `predict()` for model coefficients on the response scale
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=TRUE, size="scriptsize"}
+predict(m0) 
+```
+
+## Interpreting a covariate model -- m~4~
+
+- `coef()` for model coefficients on the link scale
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=TRUE, size="scriptsize"}
+coef(m4) 
+```
+
+- `predict()` for model coefficients on the response scale
+
+\vspace{.6em}
+\footnotesize
+```{r,eval=TRUE, echo=TRUE, size="scriptsize"}
+predict(m4) 
+```
+
+## `secr` workflow
+
+\begin{tikzpicture}[remember picture, overlay]
+\node[xshift=-0.5cm, yshift=-0.5cm] at (current page){
+\includegraphics[height=1.6in]{inputs/secr}};
+\end{tikzpicture}
+
+\begin{tikzpicture}[remember picture, overlay]
+\node[xshift=-4.38cm, yshift=-0.2cm, draw=black,fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle, 
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][4.4cm][t]{0.19\textwidth}
+       {\textbf{Pre-\texttt{secr}}}
+      \end{minipage}};
+\node[xshift=-1.7cm, yshift=-0.2cm, draw=black,fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle, 
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][4.4cm][t]{0.26\textwidth}
+       {\textbf{\texttt{secr} formatting}}
+      \end{minipage}};
+\node[xshift=1.2cm, yshift=-0.2cm, draw=black,fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle, 
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][4.4cm][t]{0.23\textwidth}
+       {\textbf{Model fitting}}
+      \end{minipage}};      
+\node[xshift=3.67cm, yshift=-0.2cm, draw=black,fill=blue!10,
+      fill opacity = 0.3, text opacity = 1, shape=rectangle, 
+      rounded corners=1.5] at (current page){
+      \begin{minipage}[t][4.4cm][t]{0.18\textwidth}
+       {\textbf{Inference}}
+      \end{minipage}};      
+\end{tikzpicture}
+
+## Post processing functions in `secr`
+
+A bunch of helper functions for working with model output:
+
+- extract link-scale estimates & associated uncertainty: `coef()`
+- extract real-scale estimates & associated uncertainty: `predict()`
+- compute the population size for the area: `region.N()`
+- plot detection function based on estimates: `plot()`
+- plot estimated AC locations: `fxi.contour()`
+- many more 
+
+## Estimation and reporting: script 05
+
+`05_model_results.R` turns fitted models into common outputs.
+
+Tasks involved: 
+
+- compare models with AICc
+- summarise abundance and density over `mask_survey_area`
+- choose the best model for mapping by AICc
+- map the survey region and predicted density
+- inspect covariate effects on density and detection
+
+## Estimation and reporting: build the summary table
+
+Choose models you want to report results for
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+fitted_models <- list(m0 = m0, m1 = m1, m2 = m2,
+                      m3 = m3, m4 = m4, m5 = m5)
+```
+\normalsize
+
+Choose area you want to report results for:
+
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+extrap_mask <- mask_survey_area
+```
+\normalsize
+
+Extracting abundance for all chosen models (`extract_abundance` is a wrapper function for `secr`'s `region.N`):
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+abundance_table <- lapply(names(fitted_models), 
+                          extract_abundance, 
+                          abundance = c("E.N")) 
+```
+\normalsize
+
+\alert{Note:} `abundance = c("E.N")` for expected abundance, `abundance = c("R.N")` for realised abundance
+
+## Estimation and reporting: build the summary table
+
+Reshape into nice format:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+abundance_table <- abundance_table |> bind_rows() |>
+  mutate(D = estimate / survey_area_km2,
+         Dlcl = lcl / survey_area_km2, Ducl = ucl / survey_area_km2,
+         CV = 100 * SE.estimate / estimate)
+```
+\normalsize
+
+\vspace{.6em}
+\scriptsize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+
+extrap_mask <- mask_survey_area
+survey_area_km2 <- nrow(extrap_mask) * attr(extrap_mask, "area") / 100
+
+extract_abundance = function(model_name, abundance = c("E.N")) {
+  rn <- region.N(fitted_models[[model_name]], region = extrap_mask)
+  data.frame(
+    modelname = model_name,
+    estimate = rn[abundance, "estimate"],
+    SE.estimate = rn[abundance, "SE.estimate"],
+    lcl = rn[abundance, "lcl"],
+    ucl = rn[abundance, "ucl"]
+  )
+}
+
+fitted_models <- list(m0 = m0, m1 = m1, m2 = m2,
+                      m3 = m3, m4 = m4, m5 = m5)
+
+abundance_table <- lapply(names(fitted_models), 
+                          extract_abundance, 
+                          abundance = c("E.N")) 
+
+abundance_table |>
+  bind_rows() |>
+  mutate(
+    D = estimate / survey_area_km2,
+    Dlcl = lcl / survey_area_km2, Ducl = ucl / survey_area_km2,
+    CV = 100 * SE.estimate / estimate
+  )
+```
+\normalsize
+
+## Estimation and reporting: abundance and density
+
+AIC's for chosen models:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+aic_table <- AIC(m0, m1, m2, m3, m4, m5, criterion = "AICc") |>
+  mutate(modelname = row.names(.)) |>
+  left_join(abundance_table, by = "modelname")
+```
+\normalsize
+
+Best model is one with lowest AIC:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+best_model_name <- aic_table$modelname[which.min(aic_table$AICc)]
+best_model <- fitted_models[[best_model_name]]
+```
+\normalsize
+
+Save results:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+write.csv(aic_table |>
+            select(modelname, model, AIC, AICc, dAICc, AICcwt, 
+                   estimate, lcl, ucl, D, Dlcl, Ducl, CV),
+          file = "output/namkha_basic_results_abundance_AIC.csv",
+          row.names = FALSE)
+```
+\normalsize
+
+## Estimation and reporting: survey region
+
+\begin{center}
+\includegraphics[height=2.45in]{../output/results/namkha_basic_survey_region.png}
+\end{center}
+
+Survey boundary, camera locations, and the trap-buffer region used in the workflow.
+
+## Estimation and reporting: predicted density
+
+Predicted density at each point in the extrapolation mask:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+pred_surface <- predictDsurface(best_model, 
+                                mask = extrap_mask, 
+                                cl.D = FALSE)
+```
+\normalsize
+
+Create grid cells centered on mask points for plotting:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+density_cells <- st_as_sf(data.frame(extrap_mask), 
+                          coords = c("x", "y"), crs = my_crs)
+density_cells <- st_buffer(
+  density_cells,
+  dist = attr(extrap_mask, "spacing") / 2,
+  endCapStyle = "SQUARE",
+  nQuadSegs = 1
+)
+```
+\normalsize
+
+Add in the densities per 100 km$^2$:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+density_cells$D_per_100km2 <- covariates(pred_surface)[, "D.0"] * 10000
+```
+\normalsize
+
+## Estimation and reporting: predicted density
+
+\begin{center}
+\includegraphics[height=2.45in]{../output/results/namkha_basic_predicted_density.png}
+\end{center}
+
+## Estimation and reporting: density covariate effects
+
+To show how density changes with one focal covariate, choose a model and covariate
+ 
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+covplot_model <- m5
+focal_cov <- "std_tri"
+focal_cov_full_name <- "Terrain ruggedness index"
+```
+\normalsize
+
+Would usually choose the AIC-best model but here using `m5` which has two density covariates and two detection covariates
+
+\vspace{.6em}
+\scriptsize
+```{r}
+#| eval: true
+#| echo: false
+#| output: true
+coef(m5)
+```
+\normalsize
+
+## Estimation and reporting: density covariate effects
+
+Create a range of potential values for the focal covariate:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+newdata <- data.frame(
+  focal_values = seq(
+    min(covariates(extrap_mask)[, focal_cov], na.rm = TRUE),
+    max(covariates(extrap_mask)[, focal_cov], na.rm = TRUE),
+    length.out = min(500, nrow(extrap_mask))
+  )
+)
+names(newdata)[1] <- focal_cov
+```
+\normalsize
+
+Other covariates are set to their mean or mode (not shown here)
+
+## Estimation and reporting: density covariate effects
+
+Predicting densities at new covariate values is a bit fiddly. 
+
+- Use a temporary mask so `predictDsurface` can evaluate the density model.
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+pred_mask <- subset(extrap_mask, subset = 1:nrow(newdata))
+```
+\normalsize
+
+- Replace covariate values with the ones we want
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+for (covname in names(newdata)) {
+  covariates(pred_mask)[, covname] <- newdata[[covname]]
+}
+```
+\normalsize
+
+- Now predict density 
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+tmp <- predictDsurface(covplot_model, mask = pred_mask, cl.D = TRUE)
+```
+\normalsize
+
+## Estimation and reporting: density covariate effects
+
+- Extract observed covariate values on mask and extrapolation region to assess covariate coverage and include this on plot
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+x_surveyed <- data.frame(xt = c(covariates(mask_model)[, plot_cov]))
+x_full <- data.frame(xt = c(covariates(extrap_mask)[, plot_cov]))
+```
+\normalsize
+
+- Finally plot: 
+
+\begin{center}
+\includegraphics[width=.8\textwidth]{../output/results/namkha_Dcovs.png}
+\end{center}
+
+## Estimation and reporting: encounter rate covariate effects
+
+Identify which covariates appear in the encounter-rate part of the chosen model
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+#| output: true
+model_covs <- covplot_model$betanames
+lam0_covs <- sub("^lambda0\\.", "", 
+                 model_covs[grepl("^lambda0\\.", model_covs)])
+lam0_covs
+```
+
+Set possible values for any $\lambda_0$ covariates **in same order as** `lam0_covs`
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: true
+#| echo: true
+lam0_covs_vals <- c(1, 0) # for cliff
+lam0_covs_vals <- c(0, 1) # for valley/stream 
+lam0_covs_vals <- c(0, 0) # for baseline (other)
+```
+\normalsize
+
+## Estimation and reporting: encounter rate covariate effects
+
+Plot for baseline:
+
+\begin{center}
+\includegraphics[width=0.5\textwidth]{../output/results/namkha_Ecovs_base.png}
+\end{center}
+
+Plot for cliff:
+
+\begin{center}
+\includegraphics[width=0.5\textwidth]{../output/results/namkha_Ecovs_cliff.png}
+\end{center}
+
+## Workflow recap
+
+\vspace{2em}
+
+1. Read in camera and detection csv's and create `capthist` \vspace{1em}
+2. Build masks for model fitting and reporting (keep these concepts separate) \vspace{1em}
+3. Fit candidate `secr` models \vspace{1em}
+4. Produce interpretable output: density, abundance, maps, covariate effects
+
+## What did we miss?
+
+\vspace{2em}
+
+1. Survey period too long for population closure \vspace{1em}
+2. Barriers to movement \vspace{1em}
+3. Other covariates  \vspace{1em}
+4. Sex-dependent parameters \vspace{1em}
+5. Perfectly clean data doesn't exist \vspace{1em}
+6. Probably lots more!
+
+\vspace{1em}
+
+\Large
+\alert{Some of these are covered in the next sections}
+\normalsize

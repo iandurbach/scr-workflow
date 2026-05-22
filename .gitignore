@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+*.png
+*.html
+.env
+.env.*
+!.env.example
+*.pem
+*deploy_key*
+*.pub
+my_work/*
+!my_work/.gitkeep

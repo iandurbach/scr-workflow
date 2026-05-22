@@ -1,0 +1,464 @@
+---
+title: "Fit advanced SECR models"
+author: "Ian Durbach & Cornelia Oedekoven"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-fold: false
+  pdf: default
+format-links:
+  - pdf
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE,
+  fig.align = "center",
+  dpi = 150
+)
+
+input_file <- knitr::current_input()
+if (!is.null(input_file)) {
+  repo_root <- normalizePath(file.path(dirname(input_file), "../..") )
+  knitr::opts_knit$set(root.dir = repo_root)
+}
+```
+
+# Covered in this tutorial
+
+- Fit full-survey advanced models
+- Fit shortened-survey models using the same fitting mask
+- Fit multisession models with session-specific masks and `userdist`
+- Fit sex-specific full-survey models using `hcov = "sex"` and `groups = "sex"`
+- Compare each candidate set with AIC
+- Save fitted models for the results tutorial
+
+# Introduction
+
+This tutorial fits four related advanced model sets. The full-survey and shortened-survey analyses are closest to the basic model-fitting workflow, but they use the elevation-constrained fitting mask and gorge-avoiding movement distances. The multisession analysis uses a list of capture histories, masks, and `userdist` objects. The sex-specific analysis demonstrates two ways to include individual sex information.
+
+The model sets are deliberately small and explicit. This keeps the teaching focus on how the advanced inputs change the fitting call, rather than on a large model-selection exercise.
+
+# Preparations
+
+Only `secr` is needed for fitting because the capture histories, masks, and user-distance objects have already been created.
+
+```{r packages}
+# Packages needed
+library(secr)
+```
+
+# Encounter and detection functions
+
+The advanced models use the hazard half-normal detection function, `detectfn = "HHN"`. With count detectors, it is often more useful to think about the encounter-rate function, $\lambda(d)$, because an individual can be detected more than once during an occasion. Detection probability, $g(d)$, is then derived from the encounter rate.
+
+For the hazard half-normal model, encounter rate declines with distance from an activity centre to a camera. `lambda0` is the encounter-rate parameter at distance zero, and `sigma` controls the spatial scale over which encounter rate declines. Both are fitted on a link-function scale, so we usually interpret predictions on the natural scale rather than reading raw coefficients directly.
+
+Trap covariates such as `cliff` and `valley_stream` enter the `lambda0` model. Mask covariates such as `std_tri` and `std_elev` enter the density model, `D`. Keeping those roles distinct is especially important in the advanced tutorial because the mask and detector covariates come from different spatial objects.
+
+# Full-survey models
+
+The full-survey model set is the closest advanced equivalent to the basic model-fitting tutorial. The two important changes are that the fitting mask is `mask_model`, which has been clipped to plausible elevations, and that `details = list(userdist = userd_model)` tells `secr.fit()` to use gorge-avoiding movement distances.
+
+```{r full-load-inputs}
+output_file <- "namkha_advanced/output/namkha_advanced_fitted_models_full.RData"
+
+load("namkha_advanced/output/namkha_advanced_secr_inputs_capthist.RData")
+load("namkha_advanced/output/namkha_advanced_secr_inputs_mask.RData")
+
+# Check the capture history and covariates before fitting models.
+summary(full_ch)
+names(covariates(full_traps))
+names(covariates(mask_model))
+```
+
+The fitted models use the hazard half-normal detection function. `D` is modelled with mask covariates such as ruggedness and elevation; `lambda0` is modelled with detector covariates such as cliff and valley/stream.
+
+```{r fit-full-models}
+f0 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  trace = FALSE
+)
+
+f1 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = f0,
+  trace = FALSE
+)
+
+f2 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_elev, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = f0,
+  trace = FALSE
+)
+
+f3 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ valley_stream, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = f0,
+  trace = FALSE
+)
+
+f4 <- secr.fit(
+  full_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ cliff + valley_stream, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = f1,
+  trace = FALSE
+)
+
+AIC(f0, f1, f2, f3, f4)
+```
+
+When fitting many models, it is good practice to check whether the optimiser finished cleanly and whether any coefficient estimates are `NA` or infinite. `trace = FALSE` suppresses the iteration output from `secr.fit()`, but it does not remove the need to inspect warnings and fitted objects.
+
+```{r check-full-model-fits}
+full_fit_checks <- data.frame(
+  model = c("f0", "f1", "f2", "f3", "f4"),
+  fit_code = sapply(list(f0, f1, f2, f3, f4), function(x) x$fit$code),
+  any_na_coef = sapply(list(f0, f1, f2, f3, f4), function(x) any(is.na(coefficients(x)))),
+  any_inf_coef = sapply(list(f0, f1, f2, f3, f4), function(x) any(is.infinite(abs(unlist(coefficients(x))))))
+)
+full_fit_checks
+```
+
+The fitted coefficients returned by `coef()` are on the link scale. For positive parameters such as `lambda0` and `sigma`, the natural-scale estimates are obtained by applying the inverse link function. `predict()` does this transformation for the fitted model and is usually the safer way to inspect interpretable parameter estimates.
+
+```{r inspect-full-null-coefficients}
+coef(f0)
+predict(f0)
+```
+
+The fitted models are saved separately from the shortened, multisession, and sex-specific model sets.
+
+```{r save-full-models}
+save(
+  f0, f1, f2, f3, f4,
+  file = output_file
+)
+```
+
+# Shortened-survey models
+
+The shortened-survey analysis is one response to closure concerns. It uses `short_ch` and `short_traps`, which already contain detections and effort restricted to the shorter survey window. The mask and `userdist` objects are the same as in the full-survey analysis so that the two analyses differ mainly in the data window.
+
+```{r short-load-inputs}
+output_file <- "namkha_advanced/output/namkha_advanced_fitted_models_short.RData"
+
+load("namkha_advanced/output/namkha_advanced_secr_inputs_capthist.RData")
+load("namkha_advanced/output/namkha_advanced_secr_inputs_mask.RData")
+
+# Check the shortened capture history and covariates before fitting models.
+summary(short_ch)
+names(covariates(short_traps))
+names(covariates(mask_model))
+```
+
+The candidate set mirrors the full-survey model set closely. This makes later comparisons easier to interpret.
+
+```{r fit-short-models}
+# This analysis uses the shorter survey period, while still retaining the
+# elevation-constrained mask and the gorge-avoiding movement distances.
+
+# Null model: density, encounter rate, and movement scale are constant.
+s0 <- secr.fit(
+  short_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  trace = FALSE
+)
+
+# Density varies with terrain ruggedness.
+s1 <- secr.fit(
+  short_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = s0,
+  trace = FALSE
+)
+
+# Density varies with elevation.
+s2 <- secr.fit(
+  short_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_elev, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = s0,
+  trace = FALSE
+)
+
+# Encounter rate varies by whether the camera is at a cliff.
+s3 <- secr.fit(
+  short_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ cliff, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = s0,
+  trace = FALSE
+)
+
+# Combined model with ruggedness on density and local topography on encounter rate.
+s4 <- secr.fit(
+  short_ch,
+  detectfn = "HHN",
+  mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ cliff + valley_stream, sigma ~ 1),
+  details = list(userdist = userd_model),
+  verify = FALSE,
+  start = s1,
+  trace = FALSE
+)
+
+AIC(s0, s1, s2, s3, s4)
+```
+
+```{r save-short-models}
+save(
+  s0, s1, s2, s3, s4,
+  file = output_file
+)
+```
+
+# Multisession models
+
+The multisession analysis uses `ch_ms`, `mask_ms`, and `userd_ms`. Each of these is a list aligned by session. The model parameters are shared across sessions unless a session term is included in the formula.
+
+```{r ms-load-inputs}
+output_file <- "namkha_advanced/output/namkha_advanced_fitted_models_ms.RData"
+
+load("namkha_advanced/output/namkha_advanced_secr_inputs_capthist.RData")
+load("namkha_advanced/output/namkha_advanced_secr_inputs_msmask.RData")
+
+# Check the multisession capture history and covariates before fitting models.
+summary(ch_ms)
+names(covariates(traps_ms[[1]]))
+names(covariates(mask_ms[[1]]))
+```
+
+The first five models use the same broad structure as the full-survey models. The sixth model, `ms5`, includes `D ~ session` as an illustration of session-specific density, but this creates complications for extrapolation and is excluded from the results workflow.
+
+```{r fit-ms-models}
+ms0 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ 1, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  trace = FALSE
+)
+
+ms1 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ std_tri, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  start = ms0,
+  trace = FALSE
+)
+
+ms2 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ std_elev, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  start = ms0,
+  trace = FALSE
+)
+
+ms3 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ 1, lambda0 ~ valley_stream, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  start = ms0,
+  trace = FALSE
+)
+
+ms4 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ std_tri, lambda0 ~ cliff + valley_stream, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  start = ms0,
+  trace = FALSE
+)
+
+# Density varies by session, allowing different abundance in each time block.
+# Note this model can't easily be used for extrapolation.
+ms5 <- secr.fit(
+  ch_ms,
+  detectfn = "HHN",
+  mask = mask_ms,
+  model = list(D ~ session, lambda0 ~ 1, sigma ~ 1),
+  details = list(userdist = userd_ms),
+  verify = FALSE,
+  start = ms0,
+  trace = FALSE
+)
+
+AIC(ms0, ms1, ms2, ms3, ms4, ms5)
+```
+
+```{r save-ms-models}
+save(
+  ms0, ms1, ms2, ms3, ms4, ms5,
+  file = output_file
+)
+```
+
+# Sex-specific full-survey models
+
+The final model-fitting script demonstrates two ways to include sex. Individual-covariate models use `hcov = "sex"` and can retain animals with unknown sex. Grouped models use `groups = "sex"` and require removing animals whose sex is unknown.
+
+These models are saved to a separate file so they do not overwrite the main full-survey models.
+
+```{r sex-load-inputs}
+output_file <- "namkha_advanced/output/namkha_advanced_fitted_models_full_sex.RData"
+
+load("namkha_advanced/output/namkha_advanced_secr_inputs_capthist.RData")
+load("namkha_advanced/output/namkha_advanced_secr_inputs_mask.RData")
+
+# Check the capture history and covariates before fitting sex-specific models.
+summary(full_ch)
+names(covariates(full_traps))
+names(covariates(mask_model))
+
+# h2 models only use first two levels of the sex covariate
+levels(covariates(full_ch)$sex)
+```
+
+In `hcov` models, `h2` represents the first two levels of the individual covariate supplied through `hcov = "sex"`. Here it is used on `lambda0` so that encounter rate can differ by sex while density remains a population-level surface.
+
+```{r fit-hcov-sex-models}
+# The fitting mask is the trap-buffer mask after clipping to plausible elevation.
+# Custom user distances are used so movement can avoid the gorge barrier.
+# ADVANCED ISSUE: hcov = "sex" allows detection parameters to vary by individual
+# sex while still retaining animals with unknown sex.
+
+# Null model with sex as an individual covariate on detection.
+f0 <- secr.fit(full_ch, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ h2, sigma ~ 1),
+  hcov = "sex", details = list(userdist = userd_model), verify = FALSE, trace = FALSE)
+
+# Density varies with terrain ruggedness.
+f1 <- secr.fit(full_ch, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ h2, sigma ~ 1),
+  hcov = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0, trace = FALSE)
+
+# Density varies with elevation.
+f2 <- secr.fit(full_ch, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_elev, lambda0 ~ h2, sigma ~ 1),
+  hcov = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0, trace = FALSE)
+
+# Encounter rate varies by whether the camera is in a valley or stream setting.
+f3 <- secr.fit(full_ch, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ valley_stream + h2, sigma ~ 1),
+  hcov = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0, trace = FALSE)
+
+# Combined model with ruggedness on density and local topography on encounter rate.
+f4 <- secr.fit(full_ch, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ cliff + valley_stream + h2, sigma ~ 1),
+  hcov = "sex", details = list(userdist = userd_model), verify = FALSE, start = f1, trace = FALSE)
+
+AIC(f0, f1, f2, f3, f4)
+```
+
+Grouped models estimate separate real parameters by sex. Because unknown-sex animals are removed, these models should not be compared in the same AIC table as the `hcov` models.
+
+```{r fit-grouped-sex-models}
+# ADVANCED ISSUE: groups = "sex" estimates separate real parameters by sex, but
+# it requires removing individuals whose sex is unknown.
+full_ch_known_sex <- subset(full_ch, subset = covariates(full_ch)$sex != "Unknown")
+full_ch_known_sex <- shareFactorLevels(full_ch_known_sex)
+
+summary(full_ch, terse = TRUE)
+summary(full_ch_known_sex, terse = TRUE)
+
+# Null grouped model for known-sex individuals.
+f0g <- secr.fit(full_ch_known_sex, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ g, sigma ~ 1),
+  groups = "sex", details = list(userdist = userd_model), verify = FALSE, trace = FALSE)
+
+# Grouped model with density varying with terrain ruggedness.
+f1g <- secr.fit(full_ch_known_sex, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ g, sigma ~ 1),
+  groups = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0g, trace = FALSE)
+
+# Grouped model with density varying with elevation.
+f2g <- secr.fit(full_ch_known_sex, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_elev, lambda0 ~ g, sigma ~ 1),
+  groups = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0g, trace = FALSE)
+
+# Grouped model with encounter rate varying at valley/stream cameras.
+f3g <- secr.fit(full_ch_known_sex, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ 1, lambda0 ~ valley_stream + g, sigma ~ 1),
+  groups = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0g, trace = FALSE)
+
+# Grouped combined model with density and encounter-rate covariates.
+f4g <- secr.fit(full_ch_known_sex, detectfn = "HHN", mask = mask_model,
+  model = list(D ~ std_tri, lambda0 ~ cliff + valley_stream + g, sigma ~ 1),
+  groups = "sex", details = list(userdist = userd_model), verify = FALSE, start = f0g, trace = FALSE)
+
+# Do not compare hcov and grouped models in the same AIC table because they use
+# different data or parameterisations.
+AIC(f0, f1, f2, f3, f4)
+AIC(f0g, f1g, f2g, f3g, f4g)
+```
+
+```{r save-sex-models}
+save(
+  f0, f1, f2, f3, f4,
+  f0g, f1g, f2g, f3g, f4g,
+  file = output_file
+)
+```
+
+# What comes next
+
+The next tutorial reports the full-survey, shortened-survey, and multisession results. It estimates abundance and density over the elevation-constrained Namkha survey area, makes predicted density maps, and plots density and detection covariate effects.
