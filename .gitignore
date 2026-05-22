@@ -13,3 +13,5 @@
 *.pub
 my_work/*
 !my_work/.gitkeep
+prompts/
+how_to/

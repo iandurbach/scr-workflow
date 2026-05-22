@@ -6,22 +6,25 @@ ARG QUARTO_VERSION=1.6.43
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PASSWORD=workshop \
+    DEFAULT_USER=user11 \
+    PASSWORD=change-me \
     ROOT=false \
+    WORKSHOP_LOGIN_USER=user11 \
+    WORKSHOP_LOGIN_PASSWORD=change-me \
     WORKSHOP_PASSWORD=workshop \
     WORKSHOP_USER_COUNT=0 \
     WORKSHOP_USERS_PREFIX=participant \
     WORKSHOP_CREATE_INSTRUCTOR=false \
     WORKSHOP_INSTRUCTOR_USER=instructor \
-    COURSE_MATERIALS_DIR=/home/rstudio/course_materials \
-    PARTICIPANT_WORK_DIR=/home/rstudio/my_work
+    COURSE_MATERIALS_DIR=/home/user11/course_materials \
+    PARTICIPANT_WORK_DIR=/home/user11/my_work
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash user11 \
- && echo "user11:cac2026" | chpasswd
+ && echo "user11:change-me" | chpasswd
 
 # Shared workshop accounts should start clean every time:
 # avoid restoring someone else's workspace, avoid saving .RData on exit,
@@ -68,11 +71,11 @@ RUN case "${TARGETARCH}" in \
 COPY docker/provision-workshop-users.sh /etc/cont-init.d/40-provision-workshop-users
 
 RUN chmod +x /etc/cont-init.d/40-provision-workshop-users \
- && mkdir -p /home/rstudio/course_materials /home/rstudio/my_work \
- && chown -R rstudio:rstudio /home/rstudio/my_work \
- && rm -f /home/rstudio/.RData /home/rstudio/.Rhistory
+ && mkdir -p /home/user11/course_materials /home/user11/my_work \
+ && chown -R user11:user11 /home/user11 \
+ && rm -f /home/user11/.RData /home/user11/.Rhistory
 
-WORKDIR /home/rstudio
+WORKDIR /home/user11
 
 EXPOSE 8787
 

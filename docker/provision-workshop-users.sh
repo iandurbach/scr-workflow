@@ -2,13 +2,15 @@
 set -euo pipefail
 
 default_password="${WORKSHOP_PASSWORD:-workshop}"
+login_user="${WORKSHOP_LOGIN_USER:-user11}"
+login_password="${WORKSHOP_LOGIN_PASSWORD:-change-me}"
 users_csv="${WORKSHOP_USERS:-}"
 user_count="${WORKSHOP_USER_COUNT:-0}"
 user_prefix="${WORKSHOP_USERS_PREFIX:-participant}"
 create_instructor="${WORKSHOP_CREATE_INSTRUCTOR:-false}"
 instructor_user="${WORKSHOP_INSTRUCTOR_USER:-instructor}"
-course_materials_dir="${COURSE_MATERIALS_DIR:-/home/rstudio/course_materials}"
-participant_work_dir="${PARTICIPANT_WORK_DIR:-/home/rstudio/my_work}"
+course_materials_dir="${COURSE_MATERIALS_DIR:-/home/${login_user}/course_materials}"
+participant_work_dir="${PARTICIPANT_WORK_DIR:-/home/${login_user}/my_work}"
 
 trim() {
   local value="$1"
@@ -30,13 +32,14 @@ create_or_update_user() {
 
   mkdir -p "${course_materials_dir}" "${participant_work_dir}" "${participant_work_dir}/${username}"
 
-  if [[ "${username}" != "rstudio" ]]; then
+  if [[ "${username}" != "${login_user}" ]]; then
     ln -sfn "${course_materials_dir}" "${home_dir}/course_materials"
     ln -sfn "${participant_work_dir}/${username}" "${home_dir}/my_work"
   fi
 
   rm -f "${home_dir}/.RData" "${home_dir}/.Rhistory"
-  chown -R "${username}:${username}" "${home_dir}" "${participant_work_dir}/${username}"
+  chown "${username}:${username}" "${home_dir}"
+  chown -R "${username}:${username}" "${participant_work_dir}/${username}"
 }
 
 declare -a workshop_users=()
@@ -68,9 +71,9 @@ else
   fi
 fi
 
-create_or_update_user "rstudio" "${PASSWORD:-${default_password}}"
+create_or_update_user "${login_user}" "${login_password}"
 
-chown -R rstudio:rstudio "${participant_work_dir}"
+chown -R "${login_user}:${login_user}" "${participant_work_dir}"
 chmod 0775 "${participant_work_dir}"
 
 for username in "${workshop_users[@]}"; do
