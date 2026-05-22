@@ -36,8 +36,16 @@ require_dir "${LOCAL_COURSE_MATERIALS_DIR}" "Course materials directory not foun
 echo "Ensuring remote workshop directories exist under ${REMOTE_DIR}..."
 ssh -i "${SSH_KEY}" "${REMOTE_HOST}" "mkdir -p '${REMOTE_COURSE_MATERIALS_DIR}' '${REMOTE_MY_WORK_DIR}'"
 
+echo "Removing generated RStudio metadata from remote course materials..."
+ssh -i "${SSH_KEY}" "${REMOTE_HOST}" "rm -rf '${REMOTE_COURSE_MATERIALS_DIR}/.Rproj.user' && find '${REMOTE_COURSE_MATERIALS_DIR}' -name .DS_Store -delete"
+
 echo "Uploading course materials from ${LOCAL_COURSE_MATERIALS_DIR}/..."
-rsync -avz -e "ssh -i ${SSH_KEY}" "${LOCAL_COURSE_MATERIALS_DIR}/" "${REMOTE_HOST}:${REMOTE_COURSE_MATERIALS_DIR}/"
+rsync -avz \
+  --exclude ".Rproj.user/" \
+  --exclude ".DS_Store" \
+  -e "ssh -i ${SSH_KEY}" \
+  "${LOCAL_COURSE_MATERIALS_DIR}/" \
+  "${REMOTE_HOST}:${REMOTE_COURSE_MATERIALS_DIR}/"
 
 echo "Restarting running container without rebuilding or pulling..."
 ssh -i "${SSH_KEY}" "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && docker compose restart"
