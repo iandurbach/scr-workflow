@@ -18,26 +18,27 @@ workshop/
   my_work/
 ```
 
-- `course_materials/` is mounted read-only into `/home/user11/course_materials`.
-- `my_work/` is mounted read-write into `/home/user11/my_work`.
-- Participants should copy the full `course_materials/` folder into `my_work/YOUR_NAME/course_materials` and work only from that copied workspace.
+- `course_materials/` is mounted read-only into `/srv/workshop/course_materials`.
+- `my_work/` is mounted read-write into `/srv/workshop/my_work`.
+- Each workshop user has `~/course_materials` and `~/my_work` links in their home directory.
+- Participants should copy the full `course_materials/` folder into their own `~/my_work/course_materials` workspace and work only from that copied workspace.
 
 ## Shared-login safeguards
 
-The image is configured for a shared `user11` login:
+The image is configured with real Linux users `user01` through `user50`:
 
 - RStudio does not save or restore the last session.
 - Global R startup disables `.RData` restore/save.
-- `/home/user11/my_work` is the writable participant area.
+- Each user has an independent writable `~/my_work` area.
 
 These settings reduce cross-participant contamination and force script-based work rather than hidden workspace state.
 
 ## Participant workflow
 
-1. Open `/home/user11/course_materials`.
-2. Create `/home/user11/my_work/YOUR_NAME`.
-3. Copy the full `/home/user11/course_materials` folder into `/home/user11/my_work/YOUR_NAME/`.
-4. Open and run scripts only from `/home/user11/my_work/YOUR_NAME/course_materials`.
+1. Log in as your assigned account, e.g. `user01`.
+2. Open `~/course_materials`.
+3. Copy the full `~/course_materials` folder into `~/my_work/`.
+4. Open and run scripts only from `~/my_work/course_materials`.
 5. Do not save files into `course_materials`, because it is read-only.
 
 ## Local testing
@@ -55,7 +56,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 ```
 
 Open `http://localhost:8787`.
-Log in as `user11` using the password from `WORKSHOP_LOGIN_PASSWORD` in `.env`.
+Log in as `user01` through `user50`.
 
 If you update the published image on a server, also copy the updated `docker-compose.yml` there before restarting the container. The image alone is not enough, because the canonical mount paths and default login user are defined in Compose.
 
@@ -83,5 +84,4 @@ cd /scr-workshop
 docker compose pull
 docker compose down
 docker compose up -d
-docker exec -it secr-workshop passwd user11
 ```

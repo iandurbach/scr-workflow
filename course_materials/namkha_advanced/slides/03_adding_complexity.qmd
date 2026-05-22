@@ -299,7 +299,8 @@ Much less (no) evidence against closure.
 
 ## Shortened survey: workflow change
 
-\alert{Key idea:} limit survey length by taking a subset of the full survey \\
+\alert{Key idea:} limit survey length by taking a subset of the full survey 
+
 \alert{Issue:} Which part of the full survey to take?
 
 \vspace{.6em}

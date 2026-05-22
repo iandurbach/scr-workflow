@@ -179,7 +179,8 @@ cameras_for_plot <- cameras %>%
   arrange(plot_order)
 
 # Mark the first detection of each animal differently from later recaptures
-detections_for_plot <- capts_raw %>%
+detections_for_plot <- capts_raw |> 
+  arrange(animalID, date) |> 
   mutate(
     detection_type = if_else(!duplicated(animalID), "New animal", "Recapture")
   ) %>%

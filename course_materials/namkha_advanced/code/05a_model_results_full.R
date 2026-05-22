@@ -379,13 +379,6 @@ ecd <- plot_detfunction(
 
 # Plot fitted encounter-rate curve and its confidence interval
 ec1 <- ggplot() +
-  geom_col(
-    data = ecd$hist,
-    aes(x = xmid / 1000, y = height),
-    width = ecd$hist$width[1] / 1000,
-    fill = "white",
-    colour = "grey40"
-  ) +
   geom_line(data = ecd$detfun, aes(x = d / 1000, y = e.est), linewidth = 1.1) +
   geom_ribbon(data = ecd$detfun, aes(x = d / 1000, ymin = e.lcl, ymax = e.ucl), alpha = 0.2) +
   xlab("Distance (km)") +

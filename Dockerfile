@@ -6,25 +6,25 @@ ARG QUARTO_VERSION=1.6.43
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    DEFAULT_USER=user11 \
-    PASSWORD=change-me \
     ROOT=false \
-    WORKSHOP_LOGIN_USER=user11 \
-    WORKSHOP_LOGIN_PASSWORD=change-me \
-    WORKSHOP_PASSWORD=workshop \
-    WORKSHOP_USER_COUNT=0 \
-    WORKSHOP_USERS_PREFIX=participant \
-    WORKSHOP_CREATE_INSTRUCTOR=false \
-    WORKSHOP_INSTRUCTOR_USER=instructor \
-    COURSE_MATERIALS_DIR=/home/user11/course_materials \
-    PARTICIPANT_WORK_DIR=/home/user11/my_work
+    COURSE_MATERIALS_DIR=/srv/workshop/course_materials \
+    PARTICIPANT_WORK_DIR=/srv/workshop/my_work
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash user11 \
- && echo "user11:change-me" | chpasswd
+RUN mkdir -p "${COURSE_MATERIALS_DIR}" "${PARTICIPANT_WORK_DIR}" \
+ && for index in $(seq -w 1 50); do \
+      username="user${index}"; \
+      useradd -m -s /bin/bash -G staff "${username}"; \
+      passwd -l "${username}"; \
+      ln -sfn "${COURSE_MATERIALS_DIR}" "/home/${username}/course_materials"; \
+      ln -sfn "${PARTICIPANT_WORK_DIR}/${username}" "/home/${username}/my_work"; \
+      rm -f "/home/${username}/.RData" "/home/${username}/.Rhistory"; \
+      chown -h "${username}:${username}" "/home/${username}/course_materials" "/home/${username}/my_work"; \
+      chown "${username}:${username}" "/home/${username}"; \
+    done
 
 # Shared workshop accounts should start clean every time:
 # avoid restoring someone else's workspace, avoid saving .RData on exit,
@@ -71,11 +71,9 @@ RUN case "${TARGETARCH}" in \
 COPY docker/provision-workshop-users.sh /etc/cont-init.d/40-provision-workshop-users
 
 RUN chmod +x /etc/cont-init.d/40-provision-workshop-users \
- && mkdir -p /home/user11/course_materials /home/user11/my_work \
- && chown -R user11:user11 /home/user11 \
- && rm -f /home/user11/.RData /home/user11/.Rhistory
+ && chmod 0775 "${PARTICIPANT_WORK_DIR}"
 
-WORKDIR /home/user11
+WORKDIR /home/user01
 
 EXPOSE 8787
 
