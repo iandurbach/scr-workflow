@@ -298,7 +298,7 @@ if (length(lam0_covs_vals) != length(lam0_covs)) {
   stop("lam0_covs_vals must be the same length as lam0_covs.")
 }
 
-# Calculate the detection function and encounter-rate curve for the chosen
+# Calculate the encounter-rate function for the chosen
 # model and the user-specified lambda0 covariate values
 ecd <- plot_detfunction(
   model = covplot_model,
@@ -333,7 +333,7 @@ if (length(lam0_covs_vals) != length(lam0_covs)) {
   stop("lam0_covs_vals must be the same length as lam0_covs.")
 }
 
-# Calculate the detection function and encounter-rate curve for the chosen
+# Calculate the encounter-rate function for the chosen
 # model and the user-specified lambda0 covariate values
 ecd <- plot_detfunction(
   model = covplot_model,
@@ -354,7 +354,7 @@ ec1 = ggplot() +
     strip.background = element_rect(fill = "white")
   )
 
-# Display the detection plot in the plotting window
+# Display the plot in the plotting window
 ec1
 
 # Save the detection covariate plot for later reference
@@ -368,7 +368,7 @@ if (length(lam0_covs_vals) != length(lam0_covs)) {
   stop("lam0_covs_vals must be the same length as lam0_covs.")
 }
 
-# Calculate the detection function and encounter-rate curve for the chosen
+# Calculate the encounter-rate function for the chosen
 # model and the user-specified lambda0 covariate values
 ecd <- plot_detfunction(
   model = covplot_model,

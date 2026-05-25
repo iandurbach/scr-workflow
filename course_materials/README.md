@@ -13,7 +13,6 @@ Instead, copy the whole folder into your own `my_work` space, then open the copi
 2. Run this command:
 
 ```bash
-if [ -L ~/my_work/course_materials ]; then rm ~/my_work/course_materials; fi
 cp -R -L ~/course_materials ~/my_work/
 ```
 

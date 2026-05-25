@@ -293,7 +293,7 @@ ggsave(file.path(results_dir, "namkha_Dcovs.png"), pD, width=9, height=3.5, dpi 
 # 6. Plot effects of any covariates on detection
 ###################################################
 
-# Identify which covariates appear in the encounter-rate part of the chosen model
+# Identify which covariates appear in the encounter rate part of the chosen model
 lam0_covs <- sub("^lambda0\\.", "", model_covs[grepl("^lambda0\\.", model_covs)])
 lam0_covs
 
@@ -308,7 +308,7 @@ if (length(lam0_covs_vals) != length(lam0_covs)) {
   stop("lam0_covs_vals must be the same length as lam0_covs.")
 }
 
-# Calculate the detection function and encounter-rate curve for the chosen
+# Calculate the encounter rate function for the chosen
 # model and the user-specified lambda0 covariate values
 ecd <- plot_detfunction(
   model = covplot_model,
@@ -317,7 +317,7 @@ ecd <- plot_detfunction(
   lam0_covs_vals = lam0_covs_vals
 )
 
-# Plot fitted encounter-rate curve and its confidence interval
+# Plot fitted encounter rate curve and its confidence interval
 ec1 = ggplot() +
   geom_line(data = ecd$detfun,
             aes(x = d/1000, y = e.est), linewidth = 1.1) +
@@ -329,7 +329,7 @@ ec1 = ggplot() +
   theme(panel.grid = element_blank(),
         strip.background = element_rect(fill = "white"))
 
-# Display the detection plot in the plotting window
+# Display the plot in the plotting window
 ec1
 
 # Save the detection covariate plot for later reference
@@ -343,7 +343,7 @@ if (length(lam0_covs_vals) != length(lam0_covs)) {
   stop("lam0_covs_vals must be the same length as lam0_covs.")
 }
 
-# Calculate the detection function and encounter-rate curve for the chosen
+# Calculate the encounter-rate function for the chosen
 # model and the user-specified lambda0 covariate values
 ecd <- plot_detfunction(
   model = covplot_model,
@@ -364,7 +364,7 @@ ec1 = ggplot() +
   theme(panel.grid = element_blank(),
         strip.background = element_rect(fill = "white"))
 
-# Display the detection plot in the plotting window
+# Display the plot in the plotting window
 ec1
 
 # Save the detection covariate plot for later reference
