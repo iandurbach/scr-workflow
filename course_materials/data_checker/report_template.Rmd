@@ -1,0 +1,120 @@
+---
+title: "SCR Data Check Report"
+output:
+  html_document:
+    theme: flatly
+params:
+  app_dir: NULL
+  traps_results: NULL
+  detections_results: NULL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(knitr)
+source(file.path(params$app_dir, "R", "helpers.R"), local = TRUE)
+traps_results <- params$traps_results
+detections_results <- params$detections_results
+```
+
+# Traps file
+
+## Status summary
+
+```{r}
+kable(traps_results$statuses)
+```
+
+## Session
+
+```{r}
+cat("Data type:", traps_results$session_summary$type, "\n")
+if (!is.null(traps_results$session_summary$unique_values)) {
+  cat("Unique values:", paste(traps_results$session_summary$unique_values, collapse = ", "), "\n")
+}
+```
+
+## trapID
+
+```{r}
+kable(traps_results$trap_summary$session_counts)
+head(data.frame(trapID = traps_results$trap_summary$trap_ids), 20) |> kable()
+```
+
+## Coordinates
+
+```{r}
+coord_widget <- make_coord_widget(traps_results$coord_summary)
+if (inherits(coord_widget, "ggplot")) {
+  print(coord_widget)
+} else {
+  cat("Interactive leaflet map available in the app.\n")
+}
+```
+
+## Effort
+
+```{r}
+print(make_effort_plot(traps_results$effort_summary))
+kable(traps_results$effort_summary$five_number)
+```
+
+## Dates
+
+```{r}
+print(make_timeline_plot(traps_results, detections_results))
+```
+
+## Covariates
+
+```{r}
+if (nrow(traps_results$covariate_summary) == 0) {
+  cat("No additional covariates found.\n")
+} else {
+  kable(traps_results$covariate_summary)
+}
+```
+
+# Detections file
+
+## Status summary
+
+```{r}
+kable(detections_results$statuses)
+```
+
+## Session
+
+```{r}
+cat("Data type:", detections_results$session_summary$type, "\n")
+if (!is.null(detections_results$session_summary$unique_values)) {
+  cat("Unique values:", paste(detections_results$session_summary$unique_values, collapse = ", "), "\n")
+}
+if (nrow(detections_results$session_summary$missing_from_detections) > 0) {
+  cat("Sessions in traps but not detections:", paste(detections_results$session_summary$missing_from_detections$session, collapse = ", "), "\n")
+}
+```
+
+## animalID
+
+```{r}
+head(detections_results$animal_summary, 20) |> kable()
+```
+
+## trapID
+
+```{r}
+head(data.frame(trapID = detections_results$trap_summary$trap_ids), 20) |> kable()
+```
+
+## Sex and other covariates
+
+```{r}
+if (nrow(detections_results$sex_summary) > 0) {
+  kable(detections_results$sex_summary)
+}
+if (nrow(detections_results$covariate_summary) > 0) {
+  kable(detections_results$covariate_summary)
+}
+```
