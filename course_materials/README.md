@@ -43,7 +43,7 @@ namkha_basic/code/01_make_capthist.R
 - Work only inside your copied folder under `~/my_work/course_materials`.
 - Do not save files into `~/course_materials`, because that folder is read-only.
 - If you reopen the workshop later, reopen the project file in your own copied folder, not the read-only master copy.
-- To restore `~/my_work/course_materials` to its original state run these two commands in the terminal:
+- To restore `~/my_work/course_materials` to its original state run these two commands in RStudio's Terminal tab:
 
 ```bash
 rm -rf ~/my_work/*
