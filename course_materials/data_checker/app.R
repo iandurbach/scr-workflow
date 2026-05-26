@@ -5,6 +5,19 @@ suppressPackageStartupMessages({
 })
 
 app_dir <- normalizePath(getwd())
+example_data_dir <- file.path(app_dir, "data")
+traps_example_choices <- c(
+  "None" = "",
+  "traps.csv" = file.path(example_data_dir, "traps.csv"),
+  "traps_raw.csv" = file.path(example_data_dir, "traps_raw.csv"),
+  "traps_bad.csv" = file.path(example_data_dir, "traps_bad.csv")
+)
+detections_example_choices <- c(
+  "None" = "",
+  "detections.csv" = file.path(example_data_dir, "detections.csv"),
+  "detections_raw.csv" = file.path(example_data_dir, "detections_raw.csv"),
+  "detections_bad.csv" = file.path(example_data_dir, "detections_bad.csv")
+)
 
 source(file.path(app_dir, "R", "helpers.R"), local = TRUE)
 
@@ -49,8 +62,16 @@ ui <- dashboardPage(
           box(
             width = 12, title = "Uploads and Column Approval", status = "primary", solidHeader = TRUE,
             fluidRow(
-              column(4, fileInput("traps_file", "Upload traps csv", accept = ".csv")),
-              column(4, fileInput("detections_file", "Upload detections csv", accept = ".csv")),
+              column(
+                4,
+                fileInput("traps_file", "Upload traps csv", accept = ".csv"),
+                selectInput("traps_example", "Or choose example traps csv", choices = traps_example_choices)
+              ),
+              column(
+                4,
+                fileInput("detections_file", "Upload detections csv", accept = ".csv"),
+                selectInput("detections_example", "Or choose example detections csv", choices = detections_example_choices)
+              ),
               column(4, textInput("crs_input", "Optional CRS", placeholder = "EPSG:32644 or +proj=utm +zone=44 +datum=WGS84 +units=m +no_defs"))
             ),
             fluidRow(
@@ -108,14 +129,34 @@ server <- function(input, output, session) {
   detections_approved <- reactiveVal(FALSE)
   detections_rejected <- reactiveVal(FALSE)
 
+  observeEvent(input$traps_example, {
+    if (nzchar(input$traps_example %||% "")) {
+      traps_approved(FALSE)
+      traps_rejected(FALSE)
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$detections_example, {
+    if (nzchar(input$detections_example %||% "")) {
+      detections_approved(FALSE)
+      detections_rejected(FALSE)
+    }
+  }, ignoreInit = TRUE)
+
   traps_raw <- reactive({
-    req(input$traps_file)
-    read_input_csv(input$traps_file$datapath)
+    if (isTruthy(input$traps_file)) {
+      return(read_input_csv(input$traps_file$datapath))
+    }
+    req(input$traps_example, nzchar(input$traps_example))
+    read_input_csv(input$traps_example)
   })
 
   detections_raw <- reactive({
-    req(input$detections_file)
-    read_input_csv(input$detections_file$datapath)
+    if (isTruthy(input$detections_file)) {
+      return(read_input_csv(input$detections_file$datapath))
+    }
+    req(input$detections_example, nzchar(input$detections_example))
+    read_input_csv(input$detections_example)
   })
 
   observeEvent(input$traps_file, {
@@ -139,13 +180,13 @@ server <- function(input, output, session) {
   })
 
   traps_ready <- reactive({
-    isTruthy(input$traps_file) &&
+    (isTruthy(input$traps_file) || nzchar(input$traps_example %||% "")) &&
       isTRUE(traps_mapping()$required_ok) &&
       (isTRUE(traps_mapping()$exact_match) || isTRUE(traps_approved()))
   })
 
   detections_ready <- reactive({
-    isTruthy(input$detections_file) &&
+    (isTruthy(input$detections_file) || nzchar(input$detections_example %||% "")) &&
       isTRUE(detections_mapping()$required_ok) &&
       (isTRUE(detections_mapping()$exact_match) || isTRUE(detections_approved()))
   })
@@ -267,8 +308,8 @@ server <- function(input, output, session) {
   })
 
   output$traps_overview <- renderUI({
-    if (!isTruthy(input$traps_file)) {
-      return(tags$p("Upload a traps csv file to begin."))
+    if (!(isTruthy(input$traps_file) || nzchar(input$traps_example %||% ""))) {
+      return(tags$p("Upload a traps csv file or choose an example file to begin."))
     }
     if (!traps_mapping()$required_ok) {
       return(tags$p(class = "text-red", "Traps checks cannot proceed until required columns are mapped."))
@@ -281,8 +322,8 @@ server <- function(input, output, session) {
   })
 
   output$detections_overview <- renderUI({
-    if (!isTruthy(input$detections_file)) {
-      return(tags$p("Upload a detections csv file to begin."))
+    if (!(isTruthy(input$detections_file) || nzchar(input$detections_example %||% ""))) {
+      return(tags$p("Upload a detections csv file or choose an example file to begin."))
     }
     if (!detections_mapping()$required_ok) {
       return(tags$p(class = "text-red", "Detections checks cannot proceed until required columns are mapped."))

@@ -4,17 +4,24 @@ options(
 )
 
 required_packages <- c(
+  "DT",
   "dplyr",
   "elevatr",
   "gdistance",
   "ggplot2",
   "here",
+  "htmltools",
   "knitr",
+  "leaflet",
   "lubridate",
   "patchwork",
   "quarto",
+  "readr",
   "rmarkdown",
+  "scales",
   "secr",
+  "shiny",
+  "shinydashboard",
   "sf",
   "stringr",
   "terra",
@@ -30,4 +37,3 @@ if (length(missing) > 0) {
   }
   pak::pkg_install(missing, ask = FALSE)
 }
-
