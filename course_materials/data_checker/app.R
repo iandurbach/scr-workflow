@@ -4,7 +4,9 @@ suppressPackageStartupMessages({
   library(shinydashboard)
 })
 
-source(file.path("R", "helpers.R"), local = TRUE)
+app_dir <- normalizePath(getwd())
+
+source(file.path(app_dir, "R", "helpers.R"), local = TRUE)
 
 flagged_dt <- function(data, page_length = 8) {
   tbl <- datatable(data, options = list(pageLength = page_length), rownames = FALSE)
@@ -27,7 +29,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "SCR Data Checker"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Data Checker", tabName = "checker", icon = icon("table"))
+      menuItem("Column Names", tabName = "column_names", icon = icon("table-columns")),
+      menuItem("Data Checks", tabName = "data_checks", icon = icon("list-check"))
     )
   ),
   dashboardBody(
@@ -41,65 +44,56 @@ ui <- dashboardPage(
     ),
     tabItems(
       tabItem(
-        tabName = "checker",
+        tabName = "column_names",
         fluidRow(
-          tabBox(
-            width = 12,
-            id = "workflow_tabs",
-            tabPanel(
-              "Column Names",
-              br(),
-              box(
-                width = 12, title = "Uploads and Column Approval", status = "primary", solidHeader = TRUE,
-                fluidRow(
-                  column(4, fileInput("traps_file", "Upload traps csv", accept = ".csv")),
-                  column(4, fileInput("detections_file", "Upload detections csv", accept = ".csv")),
-                  column(4, textInput("crs_input", "Optional CRS", placeholder = "EPSG:32644 or +proj=utm +zone=44 +datum=WGS84 +units=m +no_defs"))
-                ),
-                fluidRow(
-                  column(6, uiOutput("traps_mapping_ui")),
-                  column(6, uiOutput("detections_mapping_ui"))
-                )
-              )
+          box(
+            width = 12, title = "Uploads and Column Approval", status = "primary", solidHeader = TRUE,
+            fluidRow(
+              column(4, fileInput("traps_file", "Upload traps csv", accept = ".csv")),
+              column(4, fileInput("detections_file", "Upload detections csv", accept = ".csv")),
+              column(4, textInput("crs_input", "Optional CRS", placeholder = "EPSG:32644 or +proj=utm +zone=44 +datum=WGS84 +units=m +no_defs"))
             ),
-            tabPanel(
-              "Data Checks",
-              br(),
-              fluidRow(
-                box(
-                  width = 12, title = "Report", status = "primary", solidHeader = TRUE,
-                  uiOutput("checks_gate_ui"),
-                  downloadButton("download_report", "Download HTML report")
-                )
-              ),
-              fluidRow(
-                box(
-                  width = 6, title = "Traps File", status = "primary", solidHeader = TRUE,
-                  uiOutput("traps_overview"),
-                  tabBox(
-                    width = 12,
-                    tabPanel("session", uiOutput("traps_session_ui")),
-                    tabPanel("trapID", uiOutput("traps_trapid_ui")),
-                    tabPanel("Coordinates", uiOutput("traps_coords_ui")),
-                    tabPanel("Effort", uiOutput("traps_effort_ui")),
-                    tabPanel("Dates", uiOutput("traps_dates_ui")),
-                    tabPanel("Covariates", uiOutput("traps_covars_ui"))
-                  )
-                ),
-                box(
-                  width = 6, title = "Detections File", status = "primary", solidHeader = TRUE,
-                  uiOutput("detections_overview"),
-                  tabBox(
-                    width = 12,
-                    tabPanel("session", uiOutput("det_session_ui")),
-                    tabPanel("animalID", uiOutput("det_animal_ui")),
-                    tabPanel("occasion", uiOutput("det_occasion_ui")),
-                    tabPanel("trapID", uiOutput("det_trapid_ui")),
-                    tabPanel("Date", uiOutput("det_date_ui")),
-                    tabPanel("Covariates", uiOutput("det_covars_ui"))
-                  )
-                )
-              )
+            fluidRow(
+              column(6, uiOutput("traps_mapping_ui")),
+              column(6, uiOutput("detections_mapping_ui"))
+            )
+          )
+        )
+      ),
+      tabItem(
+        tabName = "data_checks",
+        fluidRow(
+          box(
+            width = 12, title = "Report", status = "primary", solidHeader = TRUE,
+            uiOutput("checks_gate_ui"),
+            downloadButton("download_report", "Download HTML report")
+          )
+        ),
+        fluidRow(
+          box(
+            width = 6, title = "Traps File", status = "primary", solidHeader = TRUE,
+            uiOutput("traps_overview"),
+            tabBox(
+              width = 12,
+              tabPanel("session", uiOutput("traps_session_ui")),
+              tabPanel("trapID", uiOutput("traps_trapid_ui")),
+              tabPanel("Coordinates", uiOutput("traps_coords_ui")),
+              tabPanel("Effort", uiOutput("traps_effort_ui")),
+              tabPanel("Dates", uiOutput("traps_dates_ui")),
+              tabPanel("Covariates", uiOutput("traps_covars_ui"))
+            )
+          ),
+          box(
+            width = 6, title = "Detections File", status = "primary", solidHeader = TRUE,
+            uiOutput("detections_overview"),
+            tabBox(
+              width = 12,
+              tabPanel("session", uiOutput("det_session_ui")),
+              tabPanel("animalID", uiOutput("det_animal_ui")),
+              tabPanel("occasion", uiOutput("det_occasion_ui")),
+              tabPanel("trapID", uiOutput("det_trapid_ui")),
+              tabPanel("Date", uiOutput("det_date_ui")),
+              tabPanel("Covariates", uiOutput("det_covars_ui"))
             )
           )
         )
@@ -491,7 +485,7 @@ server <- function(input, output, session) {
         tmp_rmd,
         output_file = file,
         params = list(
-          app_dir = normalizePath("."),
+          app_dir = app_dir,
           traps_results = traps_results(),
           detections_results = detections_results()
         ),
