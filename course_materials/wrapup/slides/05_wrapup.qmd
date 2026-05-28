@@ -1,0 +1,122 @@
+---
+title: Simple SECR workflow
+subtitle: Wrap-up session
+author: |
+  | SECR workflow workshop
+  | Ian Durbach and Cornelia Oedekoven
+institute: |
+  | Centre for Research into Ecological & Environmental Modelling
+  | University of St Andrews
+fontsize: 10pt
+format:
+  beamer:
+    theme: metropolis
+    incremental: false
+    slide-level: 2
+    pdf-engine: xelatex
+    syntax-highlighting: tango
+classoption: t
+urlcolor: teal
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(knitr)
+library(secr)
+library(dplyr)
+library(ggplot2)
+library(MASS)
+source("../../namkha_basic/code//more-utilities.R")
+
+knitr::opts_knit$set(global.par = TRUE)
+knitr::opts_chunk$set(fig.path = "code-and-figures/")
+
+def.chunk.hook <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(
+  chunk = function(x, options) {
+    x <- def.chunk.hook(x, options)
+    chunk_size <- if (is.null(options$size)) "normalsize" else options$size
+    ifelse(
+      chunk_size != "normalsize",
+      paste0("\n \\", chunk_size, "\n\n", x, "\n\n \\normalsize"),
+      x
+    )
+  }
+)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) {
+    if (length(x) > lines) {
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+
+load("../../namkha_basic/output/namkha_basic_secr_inputs_capthist.RData")
+load("../../namkha_basic/output/namkha_basic_secr_inputs_mask.RData")
+load("../../namkha_basic/output/namkha_basic_fitted_models.RData")
+traps_df <- read.csv("../../namkha_basic/data/traps.csv")
+caps_df <- read.csv("../../namkha_basic/data/detections.csv")
+extrap_mask <- mask_survey_area
+```
+
+## Wrap-up
+
+A standardized workflow for designing and analyzing camera trap surveys of large cats with spatially explicit capture-recapture (SCR).
+
+-   Session 1: Concepts
+-   Session 2: Simple workflow
+-   Session 3: Adding complexity
+-   Session 4: Automatic checks of data integrity
+-   Session 5: Wrap up
+
+
+## SCR with count traps: Individuals $\times$ Traps  $\times$ Sessions
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/count.png}
+\end{center}
+
+
+## `secr` basic workflow
+
+\vspace{3em}
+\begin{center}
+\includegraphics[height=2.5in]{code-and-figures/secr1.png}
+\end{center}
+
+## `secr` Adding complexity
+
+\begin{center}
+\includegraphics[height=2.5in]{code-and-figures/secr2.png}
+\end{center}
+
+
+## `secr` Data checking
+
+\begin{center}
+\includegraphics[height=2.5in]{code-and-figures/datacheckapp.png}
+\end{center}
+
+## Future plans
+
+\vspace{2cm}
+
+- Code and vignettes will be maintained on GitHub
+- Refined through use in case studies (if interested in collaborating, please get in touch) 
+- Accompanying paper describing the workflow to be posted on bioArXiv

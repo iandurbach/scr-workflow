@@ -100,51 +100,113 @@ What we expect from participants:
 -   Some knowledge on statistics
 -   Know how to work with R and RStudio
 
+## Background
+
+- SCR methods are widely used, but implementing SCR can be challenging
+- R package `secr` is great but very general
+- Through our involvement with PAWS we've done dozens of analyses, made mistakes, learned what most surveys have in common, streamlined processes, etc.
+- This workflow is the outcome of that learning process
+- Developed for snow leopard camera trap surveys but applicable more broadly
+
+## Background
+
+\alert{Goal:} To equip (snow leopard) conservationists and researchers with sofware and skills needed to confidently analyse their own data
+
+What the workflow is *not*:
+
+- A one-size-fits-all solution for all analyses
+
+What the workflow is:
+
+- A template for many simple to intermediate SCR surveys
+- A set of building blocks for more advanced analyses
+- A work in progress. Please get in touch with feedback, issues, suggestions for additions, etc!
+
+## Background
+
+
+About us
+
+::: columns
+
+:::: {.column width="33%"}
+::: {.text-center}
+![](code-and-figures/CSO.jpg){width=60%}
+
+**Cornelia Oedekoven**
+
+University of St Andrews
+:::
+::::
+
+:::: {.column width="33%"}
+::: {.text-center}
+![](code-and-figures/OW.jpg){width=60%}
+
+**Oliver Wearn**
+
+Snow Leopard Trust
+:::
+::::
+
+:::: {.column width="33%"}
+::: {.text-center}
+![](code-and-figures/Ian3.jpg){width=60%}
+
+**Ian Durbach**
+
+University of St Andrews
+:::
+::::
+
+:::
+
+
 
 ## Ready for the practicals
 
-Data: 
+There are two ways to do this:
 
-1. Download from XXXXXXXXX
-2. Unzip into dedicated `secr` workshop folder
+- Work remotely: log into and work on our dedicated RStudio Server
+  + Pros: no setup, works immediately
+  + Cons: not available after the workshop
+- Work locally: Install R, RStudio, packages, download workshop materials and set up
+  + Pros: how you would work in future
+  + Cons: needs set up
+
+\alert{Note:} we won't have time to help with local set up during the workshop -- sorry! 
+
+## Ready for the practicals (local option)
 
 Software required:
 
 1.  R: <https://cran.rstudio.com/>
 2.  RStudio: <https://posit.co/download/rstudio-desktop>
-3.  R packages (and dependencies): \vspace{.6em}
 
-\centering
-\begin{columns}[T] % align at top
-  \begin{column}{0.25\textwidth}
-  \end{column}
-  \begin{column}{0.25\textwidth}
-  \vspace{1em}
-    \begin{itemize}
-     \item dplyr
-     \item elevatr
-     \item gdistance
-     \item ggplot2
-     \item lubridate
-     \item MASS
-    \end{itemize}
-  \end{column}
+Workshop material: 
 
-  \begin{column}{0.25\textwidth}
-  \vspace{1em}
-    \begin{itemize}
-      \item patchwork
-      \item secr
-      \item sf
-      \item stringr
-      \item tidyr
-      \item terra
-    \end{itemize}
-  \end{column}
-  \begin{column}{0.25\textwidth}
-  \end{column}
-\end{columns}
+1. Download from <https://github.com/iandurbach/scr-workflow>
+2. Click on green `<Code>` button, select "Download .zip"
+3. Unzip into dedicated `secr` workshop folder
+4. Browse to `scr-workflow-main/course_materials` and open (double-click) `scr-project.Rproj`. This opens the project in RStudio.
+5. Install required packages by typing the following into the RStudio console: `source("install_workshop_packages.R")` 
 
+## Ready for the practicals (remote option)
+
+1. Go to <https://scr-workflow.spatialcr.org/>
+2. Enter the username and password given to you.
+3. Open the Terminal tab in RStudio and enter 
+```R 
+cp -R -L ~/course_materials ~/my_work/
+```
+4. Browse to `~/my_work/course_materials` and click on `scr_workshop.Rproj`. Switch to the new project.
+
+These instructions are also in `~\course_materials\README.md`.
+
+\alert{Important:} 
+
+- Work only inside your copied folder under `~/my_work/course_materials`.
+- Do not open or save files into `~/course_materials`.
 
 ## Session 1 objectives
 
@@ -244,6 +306,12 @@ Main goal: Understand the concepts of SCR surveys and be ready for the practical
 \includegraphics[height=2.45in]{code-and-figures/scr4.png}
 \end{center}
 
+## Spatial capture-recapture (SCR): Single/multi catch traps
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/sessions.png}
+\end{center}
+
 ## Spatial capture-recapture (SCR): Count traps
 
 \begin{center}
@@ -314,6 +382,20 @@ Main goal: Understand the concepts of SCR surveys and be ready for the practical
 \end{center}
 \vspace{.6em}
 
+## SCR: Detection functions
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/detfct.png}
+\end{center}
+\vspace{.6em}
+
+## SCR: Link functions
+
+\begin{center}
+\includegraphics[height=2.45in]{code-and-figures/link.png}
+\end{center}
+\vspace{.6em}
+
 
 ## Spatial capture-recapture: Data
 \footnotesize
@@ -327,6 +409,7 @@ head(caps_df, 3)
 ```
 \normalsize
 
+Simulated data based on Lama et al. First estimates of snow leopard Panthera uncia density in Northwestern Highland of Nepal (to appear in Oryx)
 
 ## Spatial capture-recapture (SCR): Assumptions
 
@@ -382,8 +465,9 @@ head(caps_df, 3)
 | Occasion | A within-session sampling period (e.g., day, night, week) during which detections are recorded. |
 | Effort | Information on when and where detectors were active; used to correctly model detection probability. |
 | Detection function | A function describing how detection probability declines with distance from the activity centre. |
-| g0 | The probability of detecting an individual at its activity centre (i.e., distance = 0). |
+| $g_0$ | The probability of detecting an individual at its activity centre (i.e., distance = 0). |
 | $σ$ (sigma) | Spatial scale parameter governing how quickly detection probability declines with distance. |
+| $\lambda_0$ | Baseline encounter rate (hazard) when the animal’s activity center is exactly at the detector (distance = 0). |
 | Density (D) | The number of individuals per unit area. |
 
 \normalsize
@@ -396,7 +480,7 @@ head(caps_df, 3)
 
 | Term | Definition |
 |:-------|:----------------------------------------|
-| Encounter model | The statistical model describing how detections arise from the spatial process and detection process. |
+| Encounter model | The statistical model describing how frequently an animal interacts with (or triggers) a detector, i.e. how detections arise from the spatial process and detection process. |
 | Spatial point process | The probabilistic model describing the distribution of activity centres across space. |
 | Likelihood | The probability of observing the data given model parameters; used for parameter estimation. |
 | Inhomogeneous density | A model where density varies across space as a function of environmental covariates. |

@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ian Durbach &amp; Cornelia Oedekoven">
+
+<title>Create the capture history</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="01_make_capthist_files/libs/clipboard/clipboard.min.js"></script>
+<script src="01_make_capthist_files/libs/quarto-html/quarto.js"></script>
+<script src="01_make_capthist_files/libs/quarto-html/popper.min.js"></script>
+<script src="01_make_capthist_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="01_make_capthist_files/libs/quarto-html/anchor.min.js"></script>
+<link href="01_make_capthist_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="01_make_capthist_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="01_make_capthist_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="01_make_capthist_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="01_make_capthist_files/libs/bootstrap/bootstrap-c0367b04c37547644fece4185067e4a7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#covered-in-this-tutorial" id="toc-covered-in-this-tutorial" class="nav-link active" data-scroll-target="#covered-in-this-tutorial"><span class="header-section-number">1</span> Covered in this tutorial</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction"><span class="header-section-number">2</span> Introduction</a></li>
+  <li><a href="#preparations" id="toc-preparations" class="nav-link" data-scroll-target="#preparations"><span class="header-section-number">3</span> Preparations</a></li>
+  <li><a href="#read-and-prepare-camera-trap-data" id="toc-read-and-prepare-camera-trap-data" class="nav-link" data-scroll-target="#read-and-prepare-camera-trap-data"><span class="header-section-number">4</span> Read and prepare camera-trap data</a>
+  <ul class="collapse">
+  <li><a href="#create-the-traps-data-frame" id="toc-create-the-traps-data-frame" class="nav-link" data-scroll-target="#create-the-traps-data-frame"><span class="header-section-number">4.1</span> Create the traps data frame</a></li>
+  <li><a href="#create-the-secr-traps-object" id="toc-create-the-secr-traps-object" class="nav-link" data-scroll-target="#create-the-secr-traps-object"><span class="header-section-number">4.2</span> Create the <code>secr</code> traps object</a></li>
+  </ul></li>
+  <li><a href="#read-and-prepare-detection-data" id="toc-read-and-prepare-detection-data" class="nav-link" data-scroll-target="#read-and-prepare-detection-data"><span class="header-section-number">5</span> Read and prepare detection data</a></li>
+  <li><a href="#create-the-capthist-object" id="toc-create-the-capthist-object" class="nav-link" data-scroll-target="#create-the-capthist-object"><span class="header-section-number">6</span> Create the <code>capthist</code> object</a></li>
+  <li><a href="#save-the-inputs" id="toc-save-the-inputs" class="nav-link" data-scroll-target="#save-the-inputs"><span class="header-section-number">7</span> Save the inputs</a></li>
+  <li><a href="#plot-capture-histories" id="toc-plot-capture-histories" class="nav-link" data-scroll-target="#plot-capture-histories"><span class="header-section-number">8</span> Plot capture histories</a>
+  <ul class="collapse">
+  <li><a href="#detections-over-time" id="toc-detections-over-time" class="nav-link" data-scroll-target="#detections-over-time"><span class="header-section-number">8.1</span> Detections over time</a></li>
+  <li><a href="#camera-operation-and-detections" id="toc-camera-operation-and-detections" class="nav-link" data-scroll-target="#camera-operation-and-detections"><span class="header-section-number">8.2</span> Camera operation and detections</a></li>
+  </ul></li>
+  <li><a href="#what-comes-next" id="toc-what-comes-next" class="nav-link" data-scroll-target="#what-comes-next"><span class="header-section-number">9</span> What comes next</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="01_make_capthist.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Create the capture history</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ian Durbach &amp; Cornelia Oedekoven </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="covered-in-this-tutorial" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Covered in this tutorial</h1>
+<ul>
+<li>Read and prepare the camera-trap data</li>
+<li>Create an <code>secr</code> traps object and add trap covariates</li>
+<li>Read and prepare the snow leopard detection data</li>
+<li>Build and check a single-session <code>capthist</code> object</li>
+<li>Save the capture-history inputs for later scripts</li>
+<li>Make simple diagnostic plots of survey effort and detections</li>
+</ul>
+</section>
+<section id="introduction" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Introduction</h1>
+<p>Spatial capture-recapture models need two closely linked pieces of information: where detectors were placed, and where each identified animal was detected. In <code>secr</code>, these are combined into a <code>capthist</code> object. The object stores the capture histories, the trap layout, detector type, trap usage, and any trap-level covariates that may later be used in detection models.</p>
+<p>This tutorial creates the Namkha capture-history input. It covers both trap preparation and detection preparation because the first modelling input file needs both trap information and detections.</p>
+<p>Here we treat the Namkha data as a single-session survey. A session is a period over which the population is assumed to be closed to gains and losses, such as births, deaths, immigration, and emigration. In this analysis the survey is represented by one session, one occasion, and total camera effort for each trap.</p>
+<p>The output of this tutorial is an R data file containing the objects needed by later scripts. The most important of these are:</p>
+<ul>
+<li><code>traps</code>: the camera locations, detector type, effort, and trap covariates</li>
+<li><code>capts</code>: the detection records in the format expected by <code>secr</code></li>
+<li><code>ch</code>: the single-session capture history used by <code>secr.fit()</code></li>
+</ul>
+</section>
+<section id="preparations" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Preparations</h1>
+<p>We begin by loading the packages used in this script and defining the file paths. The coordinate reference system is stored here because later scripts use it when creating masks and plotting spatial objects.</p>
+<p>The input data are stored in two CSV files: one file describes the cameras and one file describes the detections. Keeping these as separate tables mirrors the two pieces of information that <code>secr</code> needs: the sampling layout and the animal encounter records.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Packages needed </span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(secr)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># File paths and coordinate reference system used later in the workflow</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>my_crs <span class="ot">&lt;-</span> <span class="st">"+proj=utm +zone=44 +datum=WGS84 +units=m +no_defs"</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>traps_file <span class="ot">&lt;-</span> <span class="st">"namkha_basic/data/traps.csv"</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>detections_file <span class="ot">&lt;-</span> <span class="st">"namkha_basic/data/detections.csv"</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="st">"namkha_basic/output/namkha_basic_secr_inputs_capthist.RData"</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fig_dir <span class="ot">&lt;-</span> <span class="st">"namkha_basic/output/fig"</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(fig_dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="read-and-prepare-camera-trap-data" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Read and prepare camera-trap data</h1>
+<p>The camera file contains one row per camera station, including the camera ID, coordinates, operating dates, total effort, and some trap-level covariates. We first read the file, keep only functional cameras, and convert the start and end dates to <code>Date</code> objects.</p>
+<p>Removing non-functional cameras matters because a camera that was lost or malfunctioning did not sample animals in the same way as a working camera. In SECR terms, a trap with no valid operating period should not contribute detector effort. Keeping those records would make the trap layout look larger than the actual sampling array and could bias later model fitting.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read trap data</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>cameras <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(traps_file, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>, <span class="at">check.names =</span> <span class="cn">FALSE</span>) </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Removing cameras that were lost or malfunctioned</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>cameras <span class="ot">&lt;-</span> cameras <span class="sc">%&gt;%</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Note <span class="sc">==</span> <span class="st">"Functional"</span>) </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert trap dates to Date format</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>cameras <span class="ot">&lt;-</span> cameras <span class="sc">%&gt;%</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">start_date =</span> <span class="fu">as.Date</span>(start_date, <span class="at">format =</span> <span class="st">"%d/%m/%Y"</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">end_date =</span> <span class="fu">as.Date</span>(end_date, <span class="at">format =</span> <span class="st">"%d/%m/%Y"</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the overall survey period from the active cameras</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>survey_start <span class="ot">&lt;-</span> <span class="fu">min</span>(cameras<span class="sc">$</span>start_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>survey_end <span class="ot">&lt;-</span> <span class="fu">max</span>(cameras<span class="sc">$</span>end_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>survey_start</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "2022-10-03"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>survey_end</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "2023-07-01"</code></pre>
+</div>
+</div>
+<p>The survey start and end dates are defined from the cameras that were actually functional. Later, we use these dates to remove any detections that fall outside the survey period and to set the x-axis limits for diagnostic plots.</p>
+<p>It is worth keeping both the <code>cameras</code> data frame and the <code>traps</code> object. The <code>traps</code> object is what <code>secr</code> needs for model fitting, but the data frame is often easier to use for checking dates, plotting camera operation periods, and inspecting covariates.</p>
+<section id="create-the-traps-data-frame" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="create-the-traps-data-frame"><span class="header-section-number">4.1</span> Create the traps data frame</h2>
+<p>The next step is to make a simpler data frame containing only the columns needed for the <code>secr</code> traps object, plus any trap covariates we want to keep. The essential columns are:</p>
+<ul>
+<li><code>trapID</code>: unique camera identifier</li>
+<li><code>x</code>, <code>y</code>: projected coordinates in metres</li>
+<li><code>effort</code>: total number of days the camera was active</li>
+</ul>
+<p>The other columns are covariates that may be useful for detection models. Here we also create simple binary covariates from the <code>Topography</code> text field.</p>
+<p>The trap IDs in the camera file and detection file must match exactly. This is one of the first things to check when preparing data because small differences in spaces, capitalisation, or prefixes will prevent detections from being linked to the correct cameras.</p>
+<p>The <code>session</code> column is kept in <code>traps_df</code> as part of the SECR data structure, although this analysis has only one session.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Make a data frame with all the traps information</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This gets used to create the secr traps object </span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># but is also useful to have outside the secr package environment</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="do">## Essential traps columns</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>traps_df <span class="ot">&lt;-</span> cameras <span class="sc">%&gt;%</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># essential columns</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    session, trapID, x, y, effort,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># additional covariates</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    Topography, Water, Altitude</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Create covariates based on existing ones if you want</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>traps_df <span class="ot">&lt;-</span> traps_df <span class="sc">|&gt;</span> </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">cliff =</span> <span class="fu">if_else</span>(<span class="fu">str_detect</span>(<span class="fu">str_to_lower</span>(Topography), <span class="st">"cliff"</span>), <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">hill =</span> <span class="fu">if_else</span>(<span class="fu">str_detect</span>(<span class="fu">str_to_lower</span>(Topography), <span class="st">"hill"</span>), <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">valley_stream =</span> <span class="fu">if_else</span>(<span class="fu">str_detect</span>(<span class="fu">str_to_lower</span>(Topography), <span class="st">"valley|stream"</span>), <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>()</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(traps_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  session   trapID      x       y effort          Topography Water Altitude
+1       1  Camera8 551291 3345115     86               Cliff     1     3978
+2       1 Camera11 543352 3341253     49               Cliff     0     4061
+3       1 Camera14 537422 3337389     85               Cliff     0     3959
+4       1 Camera12 541617 3339447     93               Cliff     0     4079
+5       1    TPC48 572025 3346844    173 Cliff, Valley floor     1     4549
+6       1    TPC38 549990 3316508    105          Hill slope     1     4132
+  cliff hill valley_stream
+1     1    0             0
+2     1    0             0
+3     1    0             0
+4     1    0             0
+5     1    0             1
+6     0    1             0</code></pre>
+</div>
+</div>
+<p>The topographic covariates are coded as 0/1 indicators that can later be used in detection models. These are detector covariates, not density covariates: they describe the camera site and can be used to ask whether snow leopards are more likely to be photographed at some kinds of camera locations than others.</p>
+</section>
+<section id="create-the-secr-traps-object" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="create-the-secr-traps-object"><span class="header-section-number">4.2</span> Create the <code>secr</code> traps object</h2>
+<p><code>read.traps()</code> converts the camera locations into an <code>secr</code> traps object. The Namkha cameras are count detectors, meaning that multiple detections of the same animal at the same camera can contribute to the encounter count. Here we give each trap one usage value: its total effort over the survey.</p>
+<p>The detector type is important. A count detector is a generalized proximity detector: animals can be recorded at multiple detectors, and can be recorded more than once at the same detector during an occasion. That matches camera-trap surveys where individual animals are identified from photographs and repeated encounters are informative.</p>
+<p>Because this analysis has one occasion, the usage for each trap is a single number: the number of days that camera was operating. In a multi-occasion analysis, usage would be a matrix with one row per trap and one column per occasion.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the basic secr traps object using effort as usage</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>traps <span class="ot">&lt;-</span> <span class="fu">read.traps</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> traps_df <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(trapID, x, y, effort),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">detector =</span> <span class="st">"count"</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">trapID =</span> <span class="st">"trapID"</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">binary.usage =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(traps)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Object class       traps 
+Detector type      count 
+Detector number    55 
+Average spacing    2504.368 m 
+x-range            534489 576620 m 
+y-range            3316462 3360989 m 
+
+Usage range by occasion
+      1
+min   2
+max 251</code></pre>
+</div>
+</div>
+<p>The summary is a useful first check that <code>secr</code> has interpreted the detector type and usage correctly. We can also inspect the approximate dimensions of the camera array. This is not used directly in model fitting, but it gives a quick sense of the spatial scale of the survey.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">diff</span>(<span class="fu">range</span>(traps<span class="sc">$</span>x)) <span class="sc">/</span> <span class="dv">1000</span> <span class="co"># x-range in km</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 42.131</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">diff</span>(<span class="fu">range</span>(traps<span class="sc">$</span>y)) <span class="sc">/</span> <span class="dv">1000</span> <span class="co"># y-range in km</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 44.527</code></pre>
+</div>
+</div>
+<p>The following plot is another basic check. Since <code>traps</code> has class <code>secr::traps</code>, calling <code>plot()</code> uses the <code>secr</code> plotting method. The camera labels are added separately so that the locations and IDs can both be inspected.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(traps, <span class="at">label =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(traps, <span class="at">labels =</span> <span class="fu">rownames</span>(traps), <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">pos =</span> <span class="dv">3</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="01_make_capthist_files/figure-html/plot-trap-locations-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="1050"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(traps)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "traps"      "data.frame"</code></pre>
+</div>
+</div>
+<p>The trap covariates are stored separately from the coordinates and usage matrix. Once added, they remain attached to the traps object and are available when fitting models. For example, later scripts can allow encounter rate to vary with whether a camera was in a valley or stream.</p>
+<p>This distinction between coordinates, usage, and covariates is helpful when debugging an analysis:</p>
+<ul>
+<li>Coordinates define where animals could have been detected.</li>
+<li>Usage defines when and for how long each detector was active.</li>
+<li>Covariates describe the detector sites and can explain variation in encounter rate.</li>
+</ul>
+<p>The trap covariates must be in the same order as the traps in the <code>traps</code> object. Here that is true because <code>traps</code> is created directly from <code>traps_df</code> before the covariates are added.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add trap covariates</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>Topography <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>Topography</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>cliff <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>cliff</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>hill <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>hill</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>valley_stream <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>valley_stream</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>Water <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>Water</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">covariates</span>(traps)<span class="sc">$</span>Altitude <span class="ot">&lt;-</span> traps_df<span class="sc">$</span>Altitude</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Check</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(<span class="fu">covariates</span>(traps))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Topography"    "cliff"         "hill"          "valley_stream"
+[5] "Water"         "Altitude"     </code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="read-and-prepare-detection-data" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Read and prepare detection data</h1>
+<p>The detection file contains the records of identified snow leopards at camera traps. For <code>make.capthist()</code>, the capture data need standard <code>secr</code> columns: session, animal ID, occasion, trap ID, and optionally individual covariates such as sex.</p>
+<p>First we read the detections, convert dates, and drop detections outside the survey period defined from the camera data.</p>
+<p>The detection records need individual IDs, trap IDs, dates, sessions, and occasions in a consistent form. Here we make sure the dates are genuine <code>Date</code> objects and that the detection records belong to the period sampled by the functional cameras.</p>
+<p>Filtering detections to the survey period is a simple but important consistency check. A detection outside the camera operating period may reflect a date-format problem, a camera that was not included in the trap file, or a mismatch between the intended survey period and the data file. The script prints a message so that this does not happen silently.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read detections, standardise IDs, and keep only detections within the survey period</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>capts_raw <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(detections_file, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>, <span class="at">check.names =</span> <span class="cn">FALSE</span>) </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert detection dates to Date format</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>capts_raw <span class="ot">&lt;-</span> capts_raw <span class="sc">|&gt;</span> </span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">date =</span> <span class="fu">as.Date</span>(date, <span class="at">format =</span> <span class="st">"%m/%d/%Y"</span>),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Drop any detections falling outside the survey period defined above</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(capts_raw <span class="sc">|&gt;</span> <span class="fu">filter</span>((date <span class="sc">&lt;</span> survey_start) <span class="sc">|</span> (date <span class="sc">&gt;</span> survey_end)))){</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">"Dropping detections outside survey period!"</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> { <span class="fu">print</span>(<span class="st">"All detections within survey period"</span>)}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "All detections within survey period"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>capts_raw <span class="ot">&lt;-</span> capts_raw <span class="sc">|&gt;</span> </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(date <span class="sc">&gt;=</span> survey_start, date <span class="sc">&lt;=</span> survey_end) </span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(capts_raw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  session animalID occasion       date trapID    sex
+1       1      SL1        1 2023-02-16  TPC37 Female
+2       1     SL10        1 2023-03-04  TPC14 Female
+3       1     SL10        1 2023-05-13  TPC14 Female
+4       1     SL11        1 2022-12-18  TPC31 Female
+5       1     SL12        1 2023-02-09  TPC25   Male
+6       1     SL12        1 2022-11-13  TPC32   Male</code></pre>
+</div>
+</div>
+<p>The raw detection table still contains fields that are useful for checking and plotting. The object passed to <code>make.capthist()</code> should be simpler, containing only the columns that <code>secr</code> expects.</p>
+<p>The column names used here are the standard <code>secr</code> names:</p>
+<ul>
+<li><code>session</code>: the sampling session; always 1 in this tutorial</li>
+<li><code>animalID</code>: the individual animal identity</li>
+<li><code>occasion</code>: the sampling occasion; always 1 in this tutorial</li>
+<li><code>trapID</code>: the camera where the animal was detected</li>
+<li><code>sex</code>: an individual covariate, included here because it is available</li>
+</ul>
+<p>If sex or another individual covariate is not available in a different data set, that column can be omitted. The essential fields are the session, animal ID, occasion, and trap ID.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># make.capthist needs the standard secr columns only</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># remove sex below if unavailable</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>capts <span class="ot">&lt;-</span> capts_raw <span class="sc">%&gt;%</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(session, animalID, occasion, trapID, sex) <span class="sc">%&gt;%</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>()</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(capts)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  session animalID occasion trapID    sex
+1       1      SL1        1  TPC37 Female
+2       1     SL10        1  TPC14 Female
+3       1     SL10        1  TPC14 Female
+4       1     SL11        1  TPC31 Female
+5       1     SL12        1  TPC25   Male
+6       1     SL12        1  TPC32   Male</code></pre>
+</div>
+</div>
+<p>At this point every <code>trapID</code> in <code>capts</code> should appear in <code>traps</code>. This is one of the most common places for small data errors to appear, especially when camera IDs have spaces, different capitalisation, or inconsistent prefixes.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setdiff</span>(<span class="fu">unique</span>(capts<span class="sc">$</span>trapID), <span class="fu">rownames</span>(traps))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>character(0)</code></pre>
+</div>
+</div>
+<p>An empty result means that all detection trap IDs are represented in the traps object.</p>
+</section>
+<section id="create-the-capthist-object" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Create the <code>capthist</code> object</h1>
+<p><code>make.capthist()</code> combines the capture table and traps object. The result is a capture-history object with animal detections, trap locations, trap usage, detector type, and covariates in the format expected by <code>secr.fit()</code>.</p>
+<p>Conceptually, the capture history is a three-dimensional structure: individuals by occasions by traps. The capture table is easier for humans to read because each row is one detection, but the array form is what <code>secr</code> needs for likelihood calculations. The traps object is attached to the capture history, so the final object carries both the encounter records and the sampling design.</p>
+<p>In this tutorial there is only one session and one occasion, so the object is simpler than a full multi-occasion or multisession capture history. The same <code>make.capthist()</code> function is used when the survey is split into multiple occasions and sessions.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>ch <span class="ot">&lt;-</span> <span class="fu">make.capthist</span>(<span class="at">captures =</span> capts, <span class="at">traps =</span> traps)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">verify</span>(ch)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ch)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Object class       capthist 
+Detector type      count 
+Detector number    55 
+Average spacing    2504.368 m 
+x-range            534489 576620 m 
+y-range            3316462 3360989 m 
+
+Usage range by occasion
+      1
+min   2
+max 251
+
+Counts by occasion 
+                   1 Total
+n                 26    26
+u                 26    26
+f                 26    26
+M(t+1)            26    26
+losses             0     0
+detections        47    47
+detectors visited 24    24
+detectors used    55    55
+
+Individual covariates
+      sex    
+ Female : 8  
+ Male   :15  
+ Unknown: 3  </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ch, <span class="at">terse =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Occasions Detections    Animals  Detectors 
+         1         47         26         55 </code></pre>
+</div>
+</div>
+<p><code>verify()</code> checks that the object is internally consistent. The summaries are worth reading whenever a data set is prepared because they show, among other things, the number of detected animals, number of detections, detector type, and the trap layout.</p>
+<p><code>summary(ch, terse = TRUE)</code> gives a compact version of the same information and is useful when checking several capture histories. Other <code>secr</code> helper functions, such as <code>trapsPerAnimal()</code> and <code>moves()</code>, are useful diagnostics when there are repeated detections of individuals at multiple cameras.</p>
+</section>
+<section id="save-the-inputs" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Save the inputs</h1>
+<p>The later scripts start from the objects created here, so we save the camera data, processed trap and capture data, the <code>traps</code> object, the <code>capthist</code> object, survey dates, and CRS.</p>
+<p>The saved file is not just the final <code>ch</code> object. Keeping the intermediate data frames makes checking easier. For example, <code>traps_df</code> is useful when plotting camera operation dates, while <code>capts_raw</code> keeps the detection dates that are not needed inside the final <code>capthist</code>.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save key inputs for later scripts</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  cameras, traps_df, traps, capts_raw, capts, ch,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  survey_start, survey_end, my_crs,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> output_file</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="plot-capture-histories" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Plot capture histories</h1>
+<p>Before fitting models, it is useful to inspect when cameras were active and when detections occurred. These plots do not change the <code>capthist</code> object, but they help identify obvious data problems such as detections outside camera operating periods, long gaps in sampling, or a small number of individuals appearing late in the survey.</p>
+<p>These plots show whether sampling effort was concentrated in a particular part of the year and whether new animals continued to appear throughout the survey.</p>
+<section id="detections-over-time" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="detections-over-time"><span class="header-section-number">8.1</span> Detections over time</h2>
+<p>The first plot shows the cumulative number of detections and the cumulative number of newly detected animals through the survey. A vertical line marks the midpoint of the survey.</p>
+<p><code>first_appearance</code> is calculated with <code>duplicated(animalID)</code>, so it depends on the records being in chronological order. The raw detections are already ordered well enough for the current data, but in other data sets it is safest to arrange by date before using this logic.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Midpoint of the survey, shown as a visual reference on plots</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>mid_survey <span class="ot">&lt;-</span> survey_start <span class="sc">+</span> <span class="fu">floor</span>(<span class="fu">as.numeric</span>(survey_end <span class="sc">-</span> survey_start) <span class="sc">/</span> <span class="dv">2</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise detections by day for a simple capture-history diagnostic plot</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>daily_detections <span class="ot">&lt;-</span> capts_raw <span class="sc">%&gt;%</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">ndets =</span> <span class="dv">1</span>,</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">first_appearance =</span> <span class="sc">!</span><span class="fu">duplicated</span>(animalID)</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">complete</span>(<span class="at">date =</span> <span class="fu">seq.Date</span>(survey_start, survey_end, <span class="at">by =</span> <span class="st">"day"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">ndets =</span> <span class="fu">replace_na</span>(ndets, <span class="dv">0</span>),</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">first_appearance =</span> <span class="fu">replace_na</span>(first_appearance, <span class="cn">FALSE</span>)</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(date) <span class="sc">%&gt;%</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">cumdets =</span> <span class="fu">cumsum</span>(ndets),</span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">cumn =</span> <span class="fu">cumsum</span>(first_appearance)</span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(date, ndets, cumdets, cumn) <span class="sc">%&gt;%</span></span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(cumn, cumdets), <span class="at">names_to =</span> <span class="st">"measure"</span>, <span class="at">values_to =</span> <span class="st">"value"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">measure =</span> <span class="fu">recode</span>(measure, <span class="at">cumn =</span> <span class="st">"New animals"</span>, <span class="at">cumdets =</span> <span class="st">"Detections"</span>),</span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">measure =</span> <span class="fu">factor</span>(measure, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"New animals"</span>, <span class="st">"Detections"</span>))</span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot cumulative detections and cumulative number of animals over time</span></span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a>capture_history_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(daily_detections, <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> value, <span class="at">colour =</span> measure)) <span class="sc">+</span></span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> mid_survey, <span class="at">colour =</span> <span class="st">"grey50"</span>, <span class="at">linetype =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_date</span>(<span class="at">date_breaks =</span> <span class="st">"1 month"</span>, <span class="at">date_labels =</span> <span class="st">"%b"</span>) <span class="sc">+</span></span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"New animals"</span> <span class="ot">=</span> <span class="st">"firebrick"</span>, <span class="st">"Detections"</span> <span class="ot">=</span> <span class="st">"black"</span>)) <span class="sc">+</span></span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"Cumulative encounters"</span>, <span class="at">colour =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>) <span class="sc">+</span></span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid =</span> <span class="fu">element_blank</span>(), <span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a>capture_history_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="01_make_capthist_files/figure-html/cumulative-detections-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="1050"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The black line counts all detections, including repeated detections of the same animal. The red line counts newly detected individuals. A long flat section in the red line indicates a period when no new individuals were added, even if known individuals continued to be detected.</p>
+</section>
+<section id="camera-operation-and-detections" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="camera-operation-and-detections"><span class="header-section-number">8.2</span> Camera operation and detections</h2>
+<p>The second plot shows when each camera was operating. Detections are overlaid on the corresponding camera line, with first detections of an individual distinguished from recaptures. This is a compact way to check the temporal structure of the survey.</p>
+<p>The cameras are ordered by installation date rather than by camera ID. This makes the pattern of deployment easier to see, especially when cameras were not all installed on the same day. The plot also checks that detections are aligned with operating cameras: a point far outside a camera’s operating line would be a warning sign.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Order cameras by installation date for the trap operation plot</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>cameras_for_plot <span class="ot">&lt;-</span> cameras <span class="sc">%&gt;%</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">plot_order =</span> <span class="fu">rank</span>(start_date, <span class="at">ties.method =</span> <span class="st">"first"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(plot_order)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark the first detection of each animal differently from later recaptures</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>detections_for_plot <span class="ot">&lt;-</span> capts_raw <span class="sc">%&gt;%</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(animalID, date) <span class="sc">|&gt;</span> </span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">detection_type =</span> <span class="fu">if_else</span>(<span class="sc">!</span><span class="fu">duplicated</span>(animalID), <span class="st">"New animal"</span>, <span class="st">"Recapture"</span>)</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    cameras_for_plot <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="at">trapID =</span> trapID, plot_order),</span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"trapID"</span></span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot when each camera was operating and when detections occurred at that camera</span></span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>camera_operation_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(</span>
+<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>  cameras_for_plot,</span>
+<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(</span>
+<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">xmin =</span> <span class="fu">pmax</span>(start_date, survey_start),</span>
+<span id="cb33-22"><a href="#cb33-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">xmax =</span> <span class="fu">pmin</span>(end_date, survey_end),</span>
+<span id="cb33-23"><a href="#cb33-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> plot_order</span>
+<span id="cb33-24"><a href="#cb33-24" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb33-25"><a href="#cb33-25" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb33-26"><a href="#cb33-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_linerange</span>(<span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb33-27"><a href="#cb33-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
+<span id="cb33-28"><a href="#cb33-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> detections_for_plot,</span>
+<span id="cb33-29"><a href="#cb33-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> plot_order, <span class="at">colour =</span> detection_type),</span>
+<span id="cb33-30"><a href="#cb33-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb33-31"><a href="#cb33-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fl">1.8</span>,</span>
+<span id="cb33-32"><a href="#cb33-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.9</span></span>
+<span id="cb33-33"><a href="#cb33-33" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb33-34"><a href="#cb33-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_date</span>(<span class="at">date_breaks =</span> <span class="st">"1 month"</span>, <span class="at">date_labels =</span> <span class="st">"%b"</span>) <span class="sc">+</span></span>
+<span id="cb33-35"><a href="#cb33-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"New animal"</span> <span class="ot">=</span> <span class="st">"firebrick"</span>, <span class="st">"Recapture"</span> <span class="ot">=</span> <span class="st">"black"</span>)) <span class="sc">+</span></span>
+<span id="cb33-36"><a href="#cb33-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"Camera"</span>, <span class="at">colour =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb33-37"><a href="#cb33-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>) <span class="sc">+</span></span>
+<span id="cb33-38"><a href="#cb33-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb33-39"><a href="#cb33-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb33-40"><a href="#cb33-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb33-41"><a href="#cb33-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.ticks.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb33-42"><a href="#cb33-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"top"</span></span>
+<span id="cb33-43"><a href="#cb33-43" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb33-44"><a href="#cb33-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-45"><a href="#cb33-45" aria-hidden="true" tabindex="-1"></a>camera_operation_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="01_make_capthist_files/figure-html/camera-operation-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="1050"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Finally, we combine the two plots and save all three figures for checking and later tutorial use.</p>
+<p>The combined plot is useful as a quick summary of the capture history: the top panel shows sampling effort and detections by camera, and the bottom panel shows the cumulative capture history through time.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine the two diagnostic plots into one summary figure</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>combined_plot <span class="ot">&lt;-</span> camera_operation_plot <span class="sc">/</span> capture_history_plot <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">heights =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>combined_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="01_make_capthist_files/figure-html/save-plots-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="1050"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the plots for checking and later tutorial use</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(fig_dir, <span class="st">"namkha_capture_history_over_time.png"</span>),</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot =</span> capture_history_plot,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="dv">8</span>,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">height =</span> <span class="fl">3.5</span>,</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dpi =</span> <span class="dv">200</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(fig_dir, <span class="st">"namkha_camera_operation_dates.png"</span>),</span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot =</span> camera_operation_plot,</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="dv">8</span>,</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">height =</span> <span class="fl">5.5</span>,</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">dpi =</span> <span class="dv">200</span></span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(fig_dir, <span class="st">"namkha_capture_history_summary.png"</span>),</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot =</span> combined_plot,</span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="dv">8</span>,</span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">height =</span> <span class="dv">7</span>,</span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">dpi =</span> <span class="dv">200</span></span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="what-comes-next" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> What comes next</h1>
+<p>The next script uses the <code>traps</code> object and survey CRS saved here to build the spatial mask used for model fitting. The <code>capthist</code> object created in this tutorial is then combined with that mask in the model-fitting script.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
