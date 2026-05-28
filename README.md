@@ -14,8 +14,9 @@ The intended outcome of the workshop is to broaden access to SCR methods and to 
 
 1. The workflow is demonstrated using simulated data based on a camera trap survey of snow leopards in Namkha Rural Municipality, Nepal. The real analysis and data is reported in:
   - Lama, R.P., Lama, L.D., Ghale, T.R., Regmi, G.R., and Durbach, I.N. First estimates of snow leopard Panthera uncia density in Northwestern Highland of Nepal. To appear in *Oryx*.
-2. Workshop materials developed by Ian Durbach and Cornelia Oedekoven, with funding provided by a Biotechnology and Biological Sciences Research Council (BBSCR) Impact Acceleration Grant.
-3. Workflow scripts make heavy use of functions from R package `secr`:
+2. Workflow scripts developed by Ian Durbach over years of collaborative work on snow leopard surveys with Snow Leopard Trust.
+3. Workshop materials developed by Ian Durbach and Cornelia Oedekoven, with funding provided by a Biotechnology and Biological Sciences Research Council (BBSCR) Impact Acceleration Grant.
+4. Workflow scripts make heavy use of functions from R package `secr`:
   - Efford, M. G. (2026). secr: Spatially explicit capture-recapture models. R
   package version 5.4.2. https://CRAN.R-project.org/package=secr
 
