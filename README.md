@@ -1,8 +1,16 @@
-# Workshop
+# Efficient workflows for SCR analyses
 
-This directory is intended to become the standalone root of the RStudio workshop project.
+This repo provides a standardised workflow for designing and analysing camera trap surveys of large cats with spatially explicit capture-recapture (SCR) in R package `secr`, and material for a workshop demonstrating the workflow.
 
-## Layout
+## Workshop overview
+
+SCR methods are widely used to estimate the abundance and distribution of wild animal populations, but implementing SCR can be challenging. Available software is very broad in scope and documentation is written for a general audience. Often it is not clear which options and settings should be used for a particular application. Through our work supporting the design and analysis of camera trap surveys for the first Population Assessment of the World’s Snow Leopards (PAWS), we have developed a workflow that can be used to simplify and support many SCR surveys involving camera trap surveys of large mammals. 
+
+This workflow targets two common problem areas: efficient and reproducible conversion of detector outputs (e.g. images) into SECR inputs; and user-friendly software supporting the path from SCR inputs to results on quantities like density and abundance. Each step of the workflow is supported by R scripts that implement the relevant functions of the R package `secr` with user-friendly documentation explaining the steps involved. Supported tasks include: creating the habitat mask; constructing capture histories; model fitting; and interpretation of and prediction from fitted models. Additional scripts support more advanced features like multi-session analyses and spatial covariates. The intended outcome of the workshop is to broaden access to SCR methods and to provide researchers with the tools and understanding needed to confidently carry out their own analyses.
+
+## Repo overview
+
+Repo layout
 
 ```text
 workshop/
@@ -18,49 +26,49 @@ workshop/
   my_work/
 ```
 
-- `course_materials/` is mounted read-only into `/srv/workshop/course_materials`.
-- `my_work/` is mounted read-write into `/srv/workshop/my_work`.
-- Each workshop user has `~/course_materials` and `~/my_work` links in their home directory.
-- Participants should copy the full `course_materials/` folder into their own `~/my_work/course_materials` workspace and work only from that copied workspace.
+- `/course_materials/`: contains all participant material (details below)
+- `/scripts/`: contains helper scripts for updating workshop material
+- `/my_work/`: for workshops only -- `course_materials/` is mounted read-only into `/srv/workshop/course_materials`, `my_work/` is mounted read-write into `/srv/workshop/my_work`.
+- `/docker/`: helper scripts for setting up docker container.
 
-## Shared-login safeguards
+Most users will only need `/course_materials/`.
 
-The image is configured with real Linux users `user01` through `user50`:
+## Workshop participant instructions
 
-- RStudio does not save or restore the last session.
-- Global R startup disables `.RData` restore/save.
-- Each user has an independent writable `~/my_work` area.
+During the workshop, there will be two ways to run the R scripts implementing the workflow.
 
-These settings reduce cross-participant contamination and force script-based work rather than hidden workspace state.
+1. Work locally: Install R, RStudio, packages, download workshop materials and set up 
+2. Work remotely: log into and work on our dedicated RStudio Server (details shared on day of workshop)
 
-## Participant workflow
+Each of these are explained below. 
 
+### Local setup
+
+Software required:
+
+- R: <https://cran.rstudio.com/>
+- RStudio: <https://posit.co/download/rstudio-desktop>
+
+Workshop material: Either fork and pull repo or 
+
+1. Click on green `<Code>` button, select "Download .zip"
+2. Unzip into dedicated `secr` workshop folder
+3. Browse to `scr-workflow-main/course_materials` and open (double-click) `scr-project.Rproj`. This opens the project in RStudio.
+4. Install required packages by typing the following into the RStudio console: `source("install_workshop_packages.R")` 
+5. If step 4 fails, attempt to run the simpler installation script in `scr-workflow-main/course_materials/install_workshop_packages_simple.R` line by line.
+
+### Remote setup
+
+0. Open workshop URL.
 1. Log in as your assigned account, e.g. `user01`.
 2. Open `~/course_materials`.
 3. Copy the full `~/course_materials` folder into `~/my_work/`.
 4. Open and run scripts only from `~/my_work/course_materials`.
 5. Do not save files into `course_materials`, because it is read-only.
 
-## Local testing
+## Updating workshop material
 
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Build and start locally:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
-```
-
-Open `http://localhost:8787`.
-Log in as `user01` through `user50`.
-
-If you update the published image on a server, also copy the updated `docker-compose.yml` there before restarting the container. The image alone is not enough, because the canonical mount paths and default login user are defined in Compose.
-
-## Material-only updates
+### Material-only updates
 
 Edit files under `course_materials/`, then run:
 
@@ -68,7 +76,7 @@ Edit files under `course_materials/`, then run:
 scripts/deploy_materials.sh
 ```
 
-## Image or environment updates
+### Image or environment updates
 
 Build and push the published image:
 
@@ -79,7 +87,7 @@ docker buildx build --platform linux/amd64 -t iandurbach/secr-workflow-rstudio:l
 Then update the server:
 
 ```bash
-ssh -i ~/.ssh/workshop_deploy_key root@157.230.241.19
+ssh -i ~/.ssh/workshop_deploy_key root@WORKSHOP.IP.ADDRESS
 cd /scr-workshop
 docker compose pull
 docker compose down
