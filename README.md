@@ -6,7 +6,18 @@ This repo provides a standardised workflow for designing and analysing camera tr
 
 SCR methods are widely used to estimate the abundance and distribution of wild animal populations, but implementing SCR can be challenging. Available software is very broad in scope and documentation is written for a general audience. Often it is not clear which options and settings should be used for a particular application. Through our work supporting the design and analysis of camera trap surveys for the first Population Assessment of the World’s Snow Leopards (PAWS), we have developed a workflow that can be used to simplify and support many SCR surveys involving camera trap surveys of large mammals. 
 
-This workflow targets two common problem areas: efficient and reproducible conversion of detector outputs (e.g. images) into SECR inputs; and user-friendly software supporting the path from SCR inputs to results on quantities like density and abundance. Each step of the workflow is supported by R scripts that implement the relevant functions of the R package `secr` with user-friendly documentation explaining the steps involved. Supported tasks include: creating the habitat mask; constructing capture histories; model fitting; and interpretation of and prediction from fitted models. Additional scripts support more advanced features like multi-session analyses and spatial covariates. The intended outcome of the workshop is to broaden access to SCR methods and to provide researchers with the tools and understanding needed to confidently carry out their own analyses.
+This workflow targets two common problem areas: efficient and reproducible conversion of detector outputs (e.g. images) into SECR inputs; and user-friendly software supporting the path from SCR inputs to results on quantities like density and abundance. Each step of the workflow is supported by R scripts that implement the relevant functions of the R package `secr` with user-friendly documentation explaining the steps involved. Supported tasks include: creating the habitat mask; constructing capture histories; model fitting; and interpretation of and prediction from fitted models. Additional scripts support more advanced features like multi-session analyses and spatial covariates. 
+
+The intended outcome of the workshop is to broaden access to SCR methods and to provide researchers with the tools and understanding needed to confidently carry out their own analyses.
+
+## Acknowledgements
+
+1. The workflow is demonstrated using simulated data based on a camera trap survey of snow leopards in Namkha Rural Municipality, Nepal. The real analysis and data is reported in:
+  - Lama, R.P., Lama, L.D., Ghale, T.R., Regmi, G.R., and Durbach, I.N. First estimates of snow leopard Panthera uncia density in Northwestern Highland of Nepal. To appear in *Oryx*.
+2. Workshop materials developed by Ian Durbach and Cornelia Oedekoven, with funding provided by a Biotechnology and Biological Sciences Research Council (BBSCR) Impact Acceleration Grant.
+3. Workflow scripts make heavy use of functions from R package `secr`:
+  - Efford, M. G. (2026). secr: Spatially explicit capture-recapture models. R
+  package version 5.4.2. https://CRAN.R-project.org/package=secr
 
 ## Repo overview
 
