@@ -13,8 +13,3 @@ my_work/*
 !my_work/.gitkeep
 prompts/
 how_to/
-course_materials/namkha_advanced/output/fig/
-course_materials/namkha_advanced/output/results/
-course_materials/namkha_basic/output/checks/
-course_materials/namkha_basic/output/fig/
-course_materials/namkha_basic/output/results/
