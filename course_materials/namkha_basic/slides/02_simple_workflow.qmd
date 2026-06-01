@@ -466,8 +466,9 @@ Make traps buffer polygon
 #| eval: false
 #| echo: true
 
-traps_buffer <- traps_sf |>
-  st_buffer(mask_buffer) 
+traps_buffer <- traps_sf %>%
+  st_buffer(mask_buffer) %>%
+  st_union() %>% st_geometry()
 ```
 \normalsize
 
@@ -479,9 +480,7 @@ Full region is the union of the two polygons
 #| eval: false
 #| echo: true
 
-full_region <- traps_buffer |>
-  st_union() |>
-  st_geometry()
+full_region <- st_union(survey_area, traps_buffer)
 ```
 \normalsize
 
