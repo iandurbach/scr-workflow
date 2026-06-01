@@ -1,0 +1,228 @@
+---
+title: Automated data-integrity checks
+subtitle: SCR data checker app
+author: |
+  | Snow leopard SECR workflow workshop
+  | Ian Durbach and Cornelia Oedekoven
+institute: |
+  | Centre for Research into Ecological & Environmental Modelling
+  | University of St Andrews
+fontsize: 10pt
+format:
+  beamer:
+    theme: metropolis
+    incremental: false
+    slide-level: 2
+    pdf-engine: xelatex
+    syntax-highlighting: tango
+classoption: t
+urlcolor: teal
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(knitr)
+
+knitr::opts_knit$set(global.par = TRUE)
+knitr::opts_chunk$set(fig.path = "code-and-figures/")
+
+def.chunk.hook <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(
+  chunk = function(x, options) {
+    x <- def.chunk.hook(x, options)
+    chunk_size <- if (is.null(options$size)) "normalsize" else options$size
+    ifelse(
+      chunk_size != "normalsize",
+      paste0("\n \\", chunk_size, "\n\n", x, "\n\n \\normalsize"),
+      x
+    )
+  }
+)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) {
+    if (length(x) > lines) {
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+```
+
+## Session objectives
+
+\alert{Observation:} unstandardized, undocumented data entry practices introduce unnecessary errors and take a lot of time to correct.
+
+\alert{Main goal:} check common data problems before building `traps` and `capthist` objects for `secr`.
+
+1. Show where the app fits in the workflow
+2. Summarize the main checks on `traps` and `detections` csv files
+3. Show how to launch the app and use the report
+4. Leave the details to the live demo
+
+## Where this app fits
+
+\alert{Key idea:} this is an initial check **before** the main SECR scripts.
+
+- Upload a traps csv and a detections csv
+- Let the app propose standard column names
+- Approve the mapping if it looks right, else manually revise
+- Review errors/warnings, correct where needed
+- Download an HTML report for record-keeping
+
+## What the app expects
+
+The app is built around the standard workshop inputs:
+
+- `traps.csv`: detector locations, effort, and optionally dates/covariates
+- `detections.csv`: animal detections by session, occasion, and trap
+
+It first checks column names and can map common alternatives such as:
+
+- `trap id`, `camera id`, `station` $\rightarrow$ `trapID`
+- `easting`, `northing` $\rightarrow$ `x`, `y`
+- `latitude`, `longitude` $\rightarrow$ `lat`, `long`
+- `animal id`, `individual id` $\rightarrow$ `animalID`
+
+If no `session` column is found, the app can create `session = 1`.
+
+## Checks on the traps file
+
+Tasks involved:
+
+- validate identifiers
+- validate coordinates
+- validate effort
+- compare dates against effort
+- summarize extra covariates
+
+## Checks on the traps file
+
+Main checks:
+
+- `session` must be a positive integer, or text with no spaces
+- `trapID` must be unique within session
+- `trapID` with spaces or punctuation is flagged as a warning
+- coordinates must be numeric, with no comma decimals or stray whitespace
+- at least one coordinate pair must exist: `x/y` or `lat/long`
+- duplicated coordinates used by different trap IDs are flagged
+- possible swapped coordinates are flagged
+- `effort` must be numeric and strictly positive
+- `start_date` and `end_date` are parsed and compared with `effort`
+
+## Checks on the detections file
+
+Tasks involved:
+
+- validate IDs and occasions
+- parse dates
+- compare detections against traps
+- review optional covariates
+
+## Checks on the detections file
+
+Main checks:
+
+- `session` must be a positive integer, or text with no spaces
+- `animalID` must not contain spaces or punctuation
+- placeholder IDs such as `unknown`, `unk`, `unsure`, `na` are flagged
+- alternate forms of the same ID, such as notes in brackets, are flagged
+- `occasion` must be a positive integer
+- `date` is parsed and impossible dates are flagged
+- overlapping date ranges across occasions are flagged
+- optional `sex` values outside `Male/Female` or `M/F` are flagged
+
+## Cross-file checks
+
+Main checks:
+
+- detections whose `trapID`/`session` combination is missing from `traps.csv`
+- detections at traps with `effort <= 0`
+- detection sessions missing from `traps.csv`
+- detection dates outside the recorded trap operating period
+- sessions present in `traps.csv` but absent from detections, shown in the summaries
+
+Also gives quick summaries, plots, and maps to help spot problems visually.
+
+## Installation and launch
+
+Use the launcher script (recommended):
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+source("data_checker/run_data_checker.R")
+```
+\normalsize
+
+Or from the `course_materials` R project:
+
+\vspace{.6em}
+\footnotesize
+```{r}
+#| eval: false
+#| echo: true
+install.packages(c(
+  "shiny", "shinydashboard", "DT", "ggplot2", "dplyr", "readr",
+  "stringr", "tidyr", "scales", "leaflet", "sf", "rmarkdown", "htmltools"
+))
+
+shiny::runApp("data_checker")
+```
+\normalsize
+
+## How to use it
+
+Brief workflow for the demo:
+
+1. Upload `traps.csv` and `detections.csv`, or pick one of the example files
+2. Check the proposed column-name mapping and approve it
+3. (Optional) Enter CRS `+proj=utm +zone=44 +datum=WGS84 +units=m +no_defs`
+for map display
+4. Open the Data Checks tab and work through errors before warnings
+5. Download the HTML report once the inputs look sensible
+
+\vspace{0.6cm}
+
+\alert{Key idea:} fix input problems here, before they turn into harder-to-interpret errors later in `secr`.
+
+## Live demo
+
+- Upload a traps csv and a detections csv with required column names 
+- If no exact match, app will propose which columns to use (but no renaming, yet)
+
+\begin{center}
+\includegraphics[width=0.75\textwidth]{data_checker_mapping_raw.png}
+\end{center}
+
+## Live demo
+
+- Data Checks tab shows the main warnings and errors from both files.
+
+\begin{center}
+\includegraphics[width=0.75\textwidth]{data_checker_checks_raw.png}
+\end{center}
+
+## Live demo
+
+- Bad example files are provided to demonstrate the kinds of problems the app catches.
+
+\begin{center}
+\includegraphics[width=0.75\textwidth]{data_checker_checks_bad.png}
+\end{center}

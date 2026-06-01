@@ -898,22 +898,11 @@ Compare each sex-specific candidate set internally:
 \vspace{.6em}
 \footnotesize
 ```{r}
-#| eval: false
+#| eval: true
 #| echo: true
 AIC(sex_f0, sex_f1, sex_f2, sex_f3, sex_f4, criterion = "AICc")
 ```
 \normalsize
-
-```{r}
-#| eval: true
-#| echo: false
-#| output: true
-sex_hcov_aic <- AIC(sex_f0, sex_f1, sex_f2, sex_f3, sex_f4, criterion = "AICc")
-data.frame(
-  modelname = row.names(sex_hcov_aic),
-  sex_hcov_aic[, c("AICc", "dAICc", "AICcwt")]
-)
-```
 
 ## Sex-specific model comparison
 
@@ -928,24 +917,11 @@ AIC(sex_f0g, sex_f1g, sex_f2g, sex_f3g, sex_f4g, criterion = "AICc")
 ```
 \normalsize
 
-\vspace{.4em}
-
-```{r}
-#| eval: true
-#| echo: false
-#| output: true
-sex_group_aic <- AIC(sex_f0g, sex_f1g, sex_f2g, sex_f3g, sex_f4g, criterion = "AICc")
-data.frame(
-  modelname = row.names(sex_group_aic),
-  sex_group_aic[, c("AICc", "dAICc", "AICcwt")]
-)
-```
-\normalsize
-
 ## Sex-specific model comparison
 
 Finite mixtures, best model:
 
+\footnotesize
 ```{r}
 #| eval: true
 #| echo: true
@@ -956,6 +932,7 @@ predict(sex_f3)
 
 Groups, best model:
 
+\footnotesize
 ```{r}
 #| eval: true
 #| echo: true

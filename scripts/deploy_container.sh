@@ -26,6 +26,29 @@ require_dir() {
   fi
 }
 
+require_env_value() {
+  local path="$1"
+  local key="$2"
+  local expected="$3"
+  local actual
+
+  if [[ ! -f "${path}" ]]; then
+    echo "Error: expected ${path} to exist." >&2
+    exit 1
+  fi
+
+  actual="$(grep -E "^${key}=" "${path}" | tail -n 1 | cut -d'=' -f2- || true)"
+  if [[ -z "${actual}" ]]; then
+    echo "Error: ${key} is not set in ${path}." >&2
+    exit 1
+  fi
+
+  if [[ "${actual}" != "${expected}" ]]; then
+    echo "Error: ${key} must be ${expected} for remote deployment, but ${path} has ${actual}." >&2
+    exit 1
+  fi
+}
+
 echo "Checking deployment prerequisites..."
 require_file "${SSH_KEY}" "SSH key not found at ${SSH_KEY}."
 require_dir "course_materials" "Course materials directory not found at course_materials/."
@@ -40,6 +63,7 @@ echo "Uploading container configuration..."
 deploy_files=(docker-compose.yml .env.example)
 
 if [[ -f ".env" ]]; then
+  require_env_value ".env" "RSTUDIO_BIND_ADDRESS" "127.0.0.1"
   echo "Uploading .env along with compose configuration..."
   deploy_files+=(.env)
 else
